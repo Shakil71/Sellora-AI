@@ -62,6 +62,21 @@ enum SubscriptionStatus {
 enum ChannelType {
   WHATSAPP
   TEST
+  WEB_CHAT
+  MESSENGER
+  INSTAGRAM
+}
+
+enum ChannelConnectionStatus {
+  CONNECTED
+  ERROR
+  DISABLED
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
 }
 
 enum WhatsAppAccountStatus {
@@ -356,6 +371,10 @@ model Tenant {
   usageCounters      UsageCounter[]
   counters           TenantCounter[]
   whatsappAccounts   WhatsAppAccount[]
+  channelConnections ChannelConnection[]
+  channelContacts    ChannelContact[]
+  webhookEndpoints   WebhookEndpoint[]
+  webhookDeliveries  WebhookDelivery[]
   whatsappContacts   WhatsAppContact[]
   conversations      Conversation[]
   messages           Message[]
@@ -682,49 +701,55 @@ model WhatsAppContact {
 }
 
 model Conversation {
-  id                 String              @id @default(uuid()) @db.Uuid
-  tenantId           String              @db.Uuid
-  channel            ChannelType         @default(WHATSAPP)
-  whatsappAccountId  String?             @db.Uuid
-  contactId          String?             @db.Uuid
-  customerId         String              @db.Uuid
-  status             ConversationStatus  @default(OPEN)
-  handler            ConversationHandler @default(AI)
-  aiAgentId          String?             @db.Uuid
-  assignedUserId     String?             @db.Uuid
-  assignedTeam       String?
-  subject            String?
-  tags               String[]
-  priority           Priority            @default(MEDIUM)
-  unreadCount        Int                 @default(0)
-  lastMessageAt      DateTime            @default(now())
-  lastMessagePreview String?
-  lastInboundAt      DateTime?
-  firstResponseAt    DateTime?
-  resolvedAt         DateTime?
-  closedAt           DateTime?
-  handoffReason      String?
-  handoffAt          DateTime?
-  summary            String?
-  summaryUpdatedAt   DateTime?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  id                  String              @id @default(uuid()) @db.Uuid
+  tenantId            String              @db.Uuid
+  channel             ChannelType         @default(WHATSAPP)
+  whatsappAccountId   String?             @db.Uuid
+  contactId           String?             @db.Uuid
+  /// Website chat, Messenger or Instagram connection this conversation belongs to
+  channelConnectionId String?             @db.Uuid
+  channelContactId    String?             @db.Uuid
+  customerId          String              @db.Uuid
+  status              ConversationStatus  @default(OPEN)
+  handler             ConversationHandler @default(AI)
+  aiAgentId           String?             @db.Uuid
+  assignedUserId      String?             @db.Uuid
+  assignedTeam        String?
+  subject             String?
+  tags                String[]
+  priority            Priority            @default(MEDIUM)
+  unreadCount         Int                 @default(0)
+  lastMessageAt       DateTime            @default(now())
+  lastMessagePreview  String?
+  lastInboundAt       DateTime?
+  firstResponseAt     DateTime?
+  resolvedAt          DateTime?
+  closedAt            DateTime?
+  handoffReason       String?
+  handoffAt           DateTime?
+  summary             String?
+  summaryUpdatedAt    DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
 
-  tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  whatsappAccount WhatsAppAccount?  @relation(fields: [whatsappAccountId], references: [id], onDelete: SetNull)
-  contact         WhatsAppContact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  customer        Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  aiAgent         AIAgent?          @relation(fields: [aiAgentId], references: [id], onDelete: SetNull)
-  assignedUser    User?             @relation("ConversationAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
-  messages        Message[]
-  orders          Order[]
-  tasks           Task[]
-  toolExecutions  AIToolExecution[]
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  whatsappAccount   WhatsAppAccount?   @relation(fields: [whatsappAccountId], references: [id], onDelete: SetNull)
+  contact           WhatsAppContact?   @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  channelConnection ChannelConnection? @relation(fields: [channelConnectionId], references: [id], onDelete: SetNull)
+  channelContact    ChannelContact?    @relation(fields: [channelContactId], references: [id], onDelete: SetNull)
+  customer          Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  aiAgent           AIAgent?           @relation(fields: [aiAgentId], references: [id], onDelete: SetNull)
+  assignedUser      User?              @relation("ConversationAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  messages          Message[]
+  orders            Order[]
+  tasks             Task[]
+  toolExecutions    AIToolExecution[]
 
   @@index([tenantId, status, lastMessageAt])
   @@index([tenantId, assignedUserId])
   @@index([tenantId, handler])
   @@index([customerId])
+  @@index([channelConnectionId, channelContactId])
 }
 
 model Message {
@@ -802,6 +827,107 @@ model WebhookEvent {
 }
 
 // ---------------------------------------------------------------------------
+// Integrations: website chat, Messenger, Instagram and outgoing webhooks
+// ---------------------------------------------------------------------------
+
+/// A connected non-WhatsApp channel. Secrets are encrypted with ENCRYPTION_KEY.
+model ChannelConnection {
+  id             String                  @id @default(uuid()) @db.Uuid
+  tenantId       String                  @db.Uuid
+  type           ChannelType
+  name           String
+  /// Widget public key (website chat), Facebook Page ID (Messenger) or Instagram account ID (Instagram)
+  externalId     String
+  /// Facebook Page used to send messages (Messenger and Instagram)
+  pageId         String?
+  accessTokenEnc String?
+  appSecretEnc   String?
+  verifyToken    String?
+  settings       Json                    @default("{}")
+  status         ChannelConnectionStatus @default(CONNECTED)
+  lastError      String?
+  lastVerifiedAt DateTime?
+  defaultAgentId String?                 @db.Uuid
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  defaultAgent  AIAgent?         @relation(fields: [defaultAgentId], references: [id], onDelete: SetNull)
+  contacts      ChannelContact[]
+  conversations Conversation[]
+
+  @@unique([type, externalId])
+  @@index([tenantId, type])
+  @@index([verifyToken])
+}
+
+/// A person on a connected channel: a website visitor, a Messenger user (PSID) or an Instagram user (IGSID).
+model ChannelContact {
+  id             String    @id @default(uuid()) @db.Uuid
+  tenantId       String    @db.Uuid
+  connectionId   String    @db.Uuid
+  externalUserId String
+  profileName    String?
+  customerId     String?   @db.Uuid
+  lastMessageAt  DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  tenant        Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  connection    ChannelConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  customer      Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  conversations Conversation[]
+
+  @@unique([connectionId, externalUserId])
+  @@index([tenantId])
+}
+
+/// An HTTPS endpoint in the business's own systems that receives signed event notifications.
+model WebhookEndpoint {
+  id                  String    @id @default(uuid()) @db.Uuid
+  tenantId            String    @db.Uuid
+  url                 String
+  description         String?
+  /// Subscribed event keys; ["*"] means every event
+  events              String[]
+  secretEnc           String
+  isActive            Boolean   @default(true)
+  lastStatus          Int?
+  lastError           String?
+  lastDeliveryAt      DateTime?
+  consecutiveFailures Int       @default(0)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@index([tenantId])
+}
+
+model WebhookDelivery {
+  id             String                @id @default(uuid()) @db.Uuid
+  tenantId       String                @db.Uuid
+  endpointId     String                @db.Uuid
+  event          String
+  payload        Json
+  status         WebhookDeliveryStatus @default(PENDING)
+  attempts       Int                   @default(0)
+  responseStatus Int?
+  responseBody   String?
+  error          String?
+  durationMs     Int?
+  createdAt      DateTime              @default(now())
+  deliveredAt    DateTime?
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([endpointId, createdAt])
+  @@index([tenantId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
 // CRM
 // ---------------------------------------------------------------------------
 
@@ -830,6 +956,7 @@ model Customer {
 
   tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   whatsappContacts WhatsAppContact[]
+  channelContacts  ChannelContact[]
   conversations    Conversation[]
   leads            Lead[]
   deals            Deal[]
@@ -1304,12 +1431,13 @@ model AIAgent {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  tenant           Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  knowledgeBases   AIAgentKnowledgeBase[]
-  conversations    Conversation[]
-  whatsappAccounts WhatsAppAccount[]
-  toolExecutions   AIToolExecution[]
-  usage            AIUsageLog[]
+  tenant             Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  knowledgeBases     AIAgentKnowledgeBase[]
+  conversations      Conversation[]
+  whatsappAccounts   WhatsAppAccount[]
+  channelConnections ChannelConnection[]
+  toolExecutions     AIToolExecution[]
+  usage              AIUsageLog[]
 
   @@index([tenantId])
 }

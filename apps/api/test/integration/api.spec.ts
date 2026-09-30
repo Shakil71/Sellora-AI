@@ -226,3 +226,50 @@ describe('WhatsApp webhook', () => {
     expect(events).toBe(1);
   });
 });
+
+describe('integrations', () => {
+  it('runs a website chat conversation and keeps it inside its workspace', async () => {
+    const a = await signUp('webchat');
+    const other = await signUp('webchat-other');
+    const created = await a.write('post', '/api/v1/integrations/channels/web-chat').send({ name: 'Main site', settings: { title: 'Talk to us', allowedDomains: ['shop.example.com'] } });
+    expect(created.status).toBe(201);
+    const key: string = created.body.data.externalId;
+    expect(created.body.data.embedCode).toContain(key);
+
+    const server = app.getHttpServer();
+    const origin = { 'x-embed-origin': 'https://shop.example.com' };
+    expect((await request(server).get(`/api/v1/public/webchat/${key}/config`).set('x-embed-origin', 'https://other.example')).status).toBe(403);
+    const config = await request(server).get(`/api/v1/public/webchat/${key}/config`).set(origin);
+    expect(config.status).toBe(200);
+    expect(config.body.data.title).toBe('Talk to us');
+
+    const session = await request(server).post(`/api/v1/public/webchat/${key}/sessions`).set(origin).send({ name: 'Visitor', email: 'visitor@test.local' });
+    expect(session.status).toBe(200);
+    const token: string = session.body.data.token;
+    const sent = await request(server).post(`/api/v1/public/webchat/${key}/messages`).set(origin).set('x-visitor-token', token).send({ text: 'Do you ship abroad?' });
+    expect(sent.status).toBe(200);
+    expect(sent.body.data.from).toBe('visitor');
+
+    const list = await a.agent.get('/api/v1/conversations').query({ channel: 'WEB_CHAT' });
+    expect(list.status).toBe(200);
+    expect(JSON.stringify(list.body.data)).toContain('Do you ship abroad?');
+    const leak = await other.agent.get('/api/v1/conversations').query({ channel: 'WEB_CHAT' });
+    expect(JSON.stringify(leak.body.data)).not.toContain('Do you ship abroad?');
+
+    const forged = await request(server).get(`/api/v1/public/webchat/${key}/messages`).set(origin).set('x-visitor-token', `${token.split('.')[0]}.${'0'.repeat(64)}`);
+    expect(forged.status).toBe(401);
+    expect((await other.agent.get(`/api/v1/integrations/channels/${created.body.data.id}`)).status).toBe(404);
+  });
+
+  it('validates webhook endpoints and keeps the secret out of listings', async () => {
+    const a = await signUp('hooks');
+    expect((await a.write('post', '/api/v1/integrations/webhooks').send({ url: 'ftp://example.com/x', events: ['*'] })).status).toBe(422);
+    expect((await a.write('post', '/api/v1/integrations/webhooks').send({ url: 'https://example.com/hook', events: ['nope.event'] })).status).toBe(422);
+    const ok = await a.write('post', '/api/v1/integrations/webhooks').send({ url: 'https://example.com/hook', events: ['order.created', 'lead.created'] });
+    expect(ok.status).toBe(201);
+    expect(ok.body.data.secret).toMatch(/^whsec_/);
+    const list = await a.agent.get('/api/v1/integrations/webhooks');
+    expect(list.body.data[0].secret).toBeUndefined();
+    expect(JSON.stringify(list.body.data)).not.toContain('secretEnc');
+  });
+});

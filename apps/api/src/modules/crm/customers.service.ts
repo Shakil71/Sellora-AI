@@ -179,6 +179,21 @@ export class CustomersService {
     });
   }
 
+  /**
+   * New customer for a website visitor, Messenger or Instagram user.
+   * Deliberately never merged into an existing customer by the email or phone
+   * a visitor types: that identity is unverified, and merging would let anyone
+   * see another customer's orders through the AI agent. The team can merge
+   * profiles manually after checking.
+   */
+  async createForChannel(tenantId: string, input: { name?: string | null; email?: string | null; phone?: string | null; source: string }) {
+    const email = input.email?.trim().toLowerCase() || null;
+    const phone = input.phone ? (normalizePhone(input.phone) ?? null) : null;
+    return this.prisma.customer.create({
+      data: { tenantId, name: input.name?.trim() || email || phone || 'Website visitor', email, phone, source: input.source, lastInteractionAt: new Date() },
+    });
+  }
+
   async touch(tenantId: string, customerId: string) {
     await this.prisma.customer.updateMany({ where: { id: customerId, tenantId }, data: { lastInteractionAt: new Date() } });
   }

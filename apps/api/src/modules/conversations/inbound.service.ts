@@ -65,6 +65,8 @@ export interface NormalizedInbound {
   mediaId?: string;
   mediaMimeType?: string;
   mediaFileName?: string;
+  /** Direct media URL (Messenger/Instagram attachments). */
+  mediaUrl?: string;
   metadata?: Record<string, unknown>;
   timestamp: Date;
 }
@@ -226,6 +228,59 @@ export class InboundService {
     await this.storeInbound(tenantId, conversation, normalized, opened);
   }
 
+  /**
+   * Channel-neutral entry point for website chat, Messenger and Instagram:
+   * finds (or reopens) the contact's conversation and runs the normal
+   * inbound pipeline — realtime inbox, CRM, automation and the AI agent.
+   */
+  async receiveOnConnection(
+    connection: { id: string; tenantId: string; type: ChannelType; defaultAgentId: string | null },
+    contact: { id: string; customerId: string | null },
+    msg: NormalizedInbound,
+  ) {
+    const tenantId = connection.tenantId;
+    if (!contact.customerId) throw new ValidationError('Channel contact is not linked to a customer');
+    if (msg.externalId) {
+      const duplicate = await this.prisma.message.findUnique({ where: { tenantId_externalId: { tenantId, externalId: msg.externalId } } });
+      if (duplicate) return duplicate;
+    }
+    let conversation = await this.prisma.conversation.findFirst({
+      where: { tenantId, channelConnectionId: connection.id, channelContactId: contact.id },
+      orderBy: { lastMessageAt: 'desc' },
+    });
+    let opened = false;
+    if (!conversation) {
+      const agentId = await this.resolveAgent(tenantId, connection.defaultAgentId);
+      conversation = await this.prisma.conversation.create({
+        data: {
+          tenantId,
+          channel: connection.type,
+          channelConnectionId: connection.id,
+          channelContactId: contact.id,
+          customerId: contact.customerId,
+          handler: agentId ? ConversationHandler.AI : ConversationHandler.HUMAN,
+          aiAgentId: agentId,
+        },
+      });
+      opened = true;
+    } else if (conversation.status === ConversationStatus.RESOLVED || conversation.status === ConversationStatus.CLOSED) {
+      const agentId = conversation.aiAgentId ?? (await this.resolveAgent(tenantId, connection.defaultAgentId));
+      conversation = await this.prisma.conversation.update({
+        where: { id: conversation.id },
+        data: {
+          status: ConversationStatus.OPEN,
+          resolvedAt: null,
+          closedAt: null,
+          handler: agentId ? ConversationHandler.AI : ConversationHandler.HUMAN,
+          aiAgentId: agentId,
+        },
+      });
+      opened = true;
+    }
+    await this.prisma.channelContact.update({ where: { id: contact.id }, data: { lastMessageAt: new Date() } });
+    return this.storeInbound(tenantId, conversation, msg, opened);
+  }
+
   private async resolveAgent(tenantId: string, preferred: string | null): Promise<string | null> {
     if (preferred) {
       const agent = await this.prisma.aIAgent.findFirst({ where: { id: preferred, tenantId, isActive: true }, select: { id: true } });
@@ -254,6 +309,7 @@ export class InboundService {
           mediaId: msg.mediaId,
           mediaMimeType: msg.mediaMimeType,
           mediaFileName: msg.mediaFileName,
+          mediaUrl: msg.mediaUrl,
           externalId: msg.externalId,
           status: MessageStatus.RECEIVED,
           metadata: msg.metadata as Prisma.InputJsonValue | undefined,

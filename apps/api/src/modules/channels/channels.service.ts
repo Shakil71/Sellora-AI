@@ -3,6 +3,7 @@ import { ChannelType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { decryptSecret } from '../../common/utils/crypto.util';
 import { WhatsAppGraphClient } from '../whatsapp/whatsapp-graph.client';
+import { MetaGraphClient } from '../integrations/meta-graph.client';
 import { ChannelSendError, ChannelTarget, MessagingChannel, OutboundPayload, SendResult } from './channel.types';
 
 const WHATSAPP_WINDOW_MS = 24 * 3600 * 1000;
@@ -71,13 +72,87 @@ export class TestChannel implements MessagingChannel {
   }
 }
 
+/**
+ * Website chat: replies are stored and the visitor's widget fetches them, so
+ * "sending" only confirms the connection still exists.
+ */
+export class WebChatChannel implements MessagingChannel {
+  readonly type = ChannelType.WEB_CHAT;
+  readonly label = 'Website chat';
+  readonly customerServiceWindowMs = null;
+
+  constructor(private readonly prisma: PrismaService) {}
+
+  async send(target: ChannelTarget): Promise<SendResult> {
+    if (!target.channelConnectionId) throw new ChannelSendError('Conversation has no website chat connection', 'NO_CONNECTION', false);
+    const connection = await this.prisma.channelConnection.findFirst({ where: { id: target.channelConnectionId, tenantId: target.tenantId }, select: { status: true } });
+    if (!connection) throw new ChannelSendError('The website chat was removed', 'NO_CONNECTION', false);
+    return { externalId: null };
+  }
+}
+
+/** Splits long replies at paragraph, sentence or word boundaries. */
+export function splitMessage(text: string, max: number): string[] {
+  const parts: string[] = [];
+  let rest = text.trim();
+  while (rest.length > max) {
+    const slice = rest.slice(0, max);
+    const cut = Math.max(slice.lastIndexOf('\n\n'), slice.lastIndexOf('. '), slice.lastIndexOf('\n'));
+    const at = cut > max * 0.5 ? cut + 1 : slice.lastIndexOf(' ') > max * 0.5 ? slice.lastIndexOf(' ') : max;
+    parts.push(rest.slice(0, at).trim());
+    rest = rest.slice(at).trim();
+  }
+  if (rest) parts.push(rest);
+  return parts;
+}
+
+/** Facebook Messenger and Instagram Direct, both sent through the connected Facebook Page. */
+export class MetaMessagingChannel implements MessagingChannel {
+  readonly customerServiceWindowMs = WHATSAPP_WINDOW_MS; // Meta's standard 24-hour messaging window
+
+  constructor(
+    readonly type: typeof ChannelType.MESSENGER | typeof ChannelType.INSTAGRAM,
+    readonly label: string,
+    private readonly maxLength: number,
+    private readonly prisma: PrismaService,
+    private readonly graph: MetaGraphClient,
+  ) {}
+
+  async send(target: ChannelTarget, payload: OutboundPayload): Promise<SendResult> {
+    if (!target.recipient) throw new ChannelSendError(`Customer has no ${this.label} ID`, 'NO_RECIPIENT', false);
+    if (payload.kind === 'template') throw new ChannelSendError(`${this.label} does not support WhatsApp templates`, 'UNSUPPORTED', false);
+    const connection = target.channelConnectionId
+      ? await this.prisma.channelConnection.findFirst({ where: { id: target.channelConnectionId, tenantId: target.tenantId } })
+      : null;
+    if (!connection || !connection.accessTokenEnc || !connection.pageId) throw new ChannelSendError(`${this.label} connection is missing`, 'NO_CONNECTION', false);
+    if (connection.status === 'DISABLED') throw new ChannelSendError(`${this.label} connection is disabled`, 'DISCONNECTED', false);
+    const token = decryptSecret(connection.accessTokenEnc);
+    let lastId: string | null = null;
+    if (payload.kind === 'media' && payload.media) {
+      const m = payload.media;
+      const type = m.mimeType.startsWith('image/') ? 'image' : m.mimeType.startsWith('video/') ? 'video' : m.mimeType.startsWith('audio/') ? 'audio' : 'file';
+      const res = await this.graph.send(connection.pageId, token, target.recipient, { attachment: { type, url: m.url } });
+      lastId = res.message_id ?? null;
+      if (m.caption) for (const part of splitMessage(m.caption, this.maxLength)) lastId = (await this.graph.send(connection.pageId, token, target.recipient, { text: part })).message_id ?? lastId;
+      return { externalId: lastId };
+    }
+    for (const part of splitMessage(payload.text ?? '', this.maxLength)) {
+      lastId = (await this.graph.send(connection.pageId, token, target.recipient, { text: part })).message_id ?? lastId;
+    }
+    return { externalId: lastId };
+  }
+}
+
 @Injectable()
 export class ChannelsService {
   private readonly channels: Map<ChannelType, MessagingChannel>;
 
-  constructor(prisma: PrismaService, graph: WhatsAppGraphClient) {
+  constructor(prisma: PrismaService, graph: WhatsAppGraphClient, meta: MetaGraphClient) {
     this.channels = new Map<ChannelType, MessagingChannel>([
       [ChannelType.WHATSAPP, new WhatsAppChannel(prisma, graph)],
+      [ChannelType.WEB_CHAT, new WebChatChannel(prisma)],
+      [ChannelType.MESSENGER, new MetaMessagingChannel(ChannelType.MESSENGER, 'Messenger', 2000, prisma, meta)],
+      [ChannelType.INSTAGRAM, new MetaMessagingChannel(ChannelType.INSTAGRAM, 'Instagram', 1000, prisma, meta)],
       [ChannelType.TEST, new TestChannel()],
     ]);
   }

@@ -139,6 +139,38 @@ Prices always come from the catalog (overrides require `orders.update`); stock i
 | GET | `/analytics/dashboard` · `/analytics/sales|crm|conversations|ai?range=7d|30d|90d|12m` | dashboard.view / analytics.view |
 | GET | `/search?q=` | results filtered by permission |
 
+### Integrations
+| Method | Path | Permission |
+| --- | --- | --- |
+| GET | `/integrations/overview` | integrations.view |
+| GET | `/integrations/channels?type=WEB_CHAT` (or `MESSENGER`, `INSTAGRAM`) · `/integrations/channels/:id` | integrations.view |
+| POST | `/integrations/channels/web-chat` · `/integrations/channels/meta` | integrations.manage |
+| PATCH/DELETE | `/integrations/channels/:id` · POST `/:id/verify` · `/:id/rotate-verify-token` | integrations.manage |
+| GET/POST | `/integrations/webhooks` · GET/PATCH/DELETE `/integrations/webhooks/:id` | view / manage |
+| POST | `/integrations/webhooks/:id/test` · `/:id/secret` · `/:id/roll-secret` | integrations.manage |
+| GET | `/integrations/webhooks/:id/deliveries` · POST `/integrations/webhooks/deliveries/:id/redeliver` | view / manage |
+
+**Website chat (public, used by `/widget.js`)**: `GET /public/webchat/:key/config`, `POST /public/webchat/:key/sessions`, `GET` and `POST /public/webchat/:key/messages`, `PATCH /public/webchat/:key/profile`. Visitor calls send `x-visitor-token` (returned by `sessions`) and `x-embed-origin`.
+
+**Messenger & Instagram webhook (public)**: `GET` and `POST /webhooks/meta`, with the verify-token handshake and `X-Hub-Signature-256` checked against the connection's app secret.
+
+**Outgoing webhook request** (sent to your endpoint):
+
+```http
+POST /your/webhook
+Content-Type: application/json
+X-Sellora-Event: order.created
+X-Sellora-Delivery: 0f5c…
+X-Sellora-Timestamp: 1790000000
+X-Sellora-Signature: t=1790000000,v1=5d41…
+
+{ "id": "0f5c…", "event": "order.created", "createdAt": "…", "workspaceId": "…",
+  "data": { "orderId": "…", "customer": { "name": "…", "email": "…" },
+            "order": { "number": "ACM-001042", "total": "129.00", "items": [] } } }
+```
+
+Events: `message.received`, `conversation.opened`, `conversation.resolved`, `lead.created`, `order.created`, `order.paid`, `order.cancelled`, `inventory.low`, `webhook.test`.
+
 ### Health (no prefix)
 `GET /health`, `GET /health/live`, `GET /health/ready` (503 when the database or Redis is down).
 

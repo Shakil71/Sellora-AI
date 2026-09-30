@@ -49,6 +49,7 @@ import {
   SheetTitle,
 } from '@/components/ui/overlays';
 import { useMembers } from '@/components/shared/pickers';
+import { channelLabel } from '@/components/shared/channel-badge';
 import { CustomerPanel } from './customer-panel';
 
 type ConversationDetail = Conversation & { windowOpen: boolean };
@@ -232,7 +233,11 @@ function Composer({ conversation }: { conversation: ConversationDetail }) {
       {windowClosed && mode === 'reply' && (
         <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs">
           <Clock className="size-3.5 shrink-0" />
-          <span className="flex-1">The 24-hour customer service window has closed. WhatsApp only allows approved templates until the customer replies.</span>
+          <span className="flex-1">
+            {conversation.channel === 'WHATSAPP'
+              ? 'The 24-hour customer service window has closed. WhatsApp only allows approved templates until the customer replies.'
+              : `The 24-hour messaging window on ${channelLabel(conversation.channel)} has closed. You can reply again after the customer sends a new message.`}
+          </span>
         </div>
       )}
       <div className="mb-2 flex items-center gap-1">
@@ -274,7 +279,17 @@ function Composer({ conversation }: { conversation: ConversationDetail }) {
           }}
           rows={1}
           disabled={windowClosed && mode === 'reply'}
-          placeholder={mode === 'note' ? 'Write a note only your team can see…' : mode === 'customer' ? 'Type what the customer would send…' : windowClosed ? 'Use a template to message this customer' : 'Type a reply… (Shift+Enter for a new line)'}
+          placeholder={
+            mode === 'note'
+              ? 'Write a note only your team can see…'
+              : mode === 'customer'
+                ? 'Type what the customer would send…'
+                : windowClosed
+                  ? conversation.channel === 'WHATSAPP'
+                    ? 'Use a template to message this customer'
+                    : 'Waiting for the customer to message again'
+                  : 'Type a reply… (Shift+Enter for a new line)'
+          }
           aria-label="Message"
           className="max-h-40 min-h-9 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground field-sizing-content disabled:cursor-not-allowed"
         />
@@ -443,8 +458,13 @@ export function ChatPanel({ conversationId, onBack }: { conversationId: string; 
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">{c.customer.name}</p>
             <p className="truncate text-xs text-muted-foreground">
-              {c.channel === 'TEST' ? 'Test conversation' : (c.customer.whatsappNumber ?? 'WhatsApp')}
+              {c.channel === 'TEST'
+                ? 'Test conversation'
+                : c.channel === 'WHATSAPP'
+                  ? (c.customer.whatsappNumber ?? 'WhatsApp')
+                  : channelLabel(c.channel)}
               {c.whatsappAccount && ` · via ${c.whatsappAccount.name}`}
+              {c.channelConnection && ` · ${c.channelConnection.name}`}
             </p>
           </div>
           {can('conversations.reply') && (

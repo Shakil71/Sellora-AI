@@ -29,6 +29,7 @@ export class QueueService {
     @InjectQueue(QUEUES.DOCUMENTS) readonly documents: Queue,
     @InjectQueue(QUEUES.AUTOMATION) readonly automation: Queue,
     @InjectQueue(QUEUES.ANALYTICS) readonly analytics: Queue,
+    @InjectQueue(QUEUES.INTEGRATIONS) readonly integrations: Queue,
     @InjectQueue(QUEUES.DEAD_LETTER) readonly deadLetter: Queue,
   ) {}
 
@@ -89,6 +90,26 @@ export class QueueService {
       JOBS.AUTOMATION_RUN,
       { runId, fromNodeKey },
       { delay: delayMs, jobId: `run-${runId}-${fromNodeKey ?? 'start'}-${Date.now()}` },
+    );
+  }
+
+  /** Messenger / Instagram webhook stored as a WebhookEvent. */
+  processMetaWebhook(eventId: string) {
+    return this.add(this.integrations, JOBS.META_WEBHOOK, { eventId }, { jobId: `meta-${eventId}`, attempts: 5 });
+  }
+
+  /** Finds webhook endpoints subscribed to an event and schedules deliveries. */
+  webhookFanout(tenantId: string, event: string, data: Record<string, unknown>, occurredAt: string) {
+    return this.add(this.integrations, JOBS.WEBHOOK_FANOUT, { tenantId, event, data, occurredAt }, { attempts: 3 });
+  }
+
+  /** One signed HTTP delivery, retried with backoff for about an hour. */
+  deliverWebhook(deliveryId: string, attempts = 6) {
+    return this.add(
+      this.integrations,
+      JOBS.WEBHOOK_DELIVER,
+      { deliveryId },
+      { jobId: `whd-${deliveryId}-${Date.now()}`, attempts, backoff: { type: 'exponential', delay: 30_000 } },
     );
   }
 

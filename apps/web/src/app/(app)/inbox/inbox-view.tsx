@@ -12,6 +12,7 @@ import { Avatar, Badge, Input, Skeleton } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/overlays';
 import { EmptyState } from '@/components/shared/page';
+import { ChannelBadge } from '@/components/shared/channel-badge';
 import { ChatPanel } from './chat-panel';
 import { toast } from 'sonner';
 
@@ -46,11 +47,7 @@ function ConversationRow({ c, active, onClick }: { c: Conversation; active: bool
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className={cn('truncate text-sm', c.unreadCount > 0 ? 'font-semibold' : 'font-medium')}>{c.customer.name}</p>
-          {c.channel === 'TEST' && (
-            <Badge variant="muted" className="px-1 text-[10px]">
-              Test
-            </Badge>
-          )}
+          {c.channel !== 'WHATSAPP' && <ChannelBadge channel={c.channel} compact={c.channel !== 'TEST'} />}
           <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">{shortTime(c.lastMessageAt)}</span>
         </div>
         <div className="mt-0.5 flex items-center gap-2">

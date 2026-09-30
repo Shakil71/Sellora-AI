@@ -25,6 +25,7 @@ import { AnalyticsController, SearchController } from './modules/analytics/analy
 import { OnboardingController } from './modules/onboarding/onboarding.controller';
 import { AdminController } from './modules/admin/admin.controller';
 import { InstallController } from './modules/install/install.controller';
+import { IntegrationsController, MetaWebhookController, WebChatPublicController } from './modules/integrations/integrations.controller';
 
 export const API_CONTROLLERS: Type[] = [
   HealthController,
@@ -58,4 +59,7 @@ export const API_CONTROLLERS: Type[] = [
   OnboardingController,
   AdminController,
   InstallController,
+  IntegrationsController,
+  WebChatPublicController,
+  MetaWebhookController,
 ];

@@ -7,6 +7,7 @@ export const QUEUES = {
   DOCUMENTS: 'documents',
   AUTOMATION: 'automation',
   ANALYTICS: 'analytics',
+  INTEGRATIONS: 'integrations',
   DEAD_LETTER: 'dead-letter',
 } as const;
 
@@ -24,6 +25,9 @@ export const JOBS = {
   INVENTORY_SCAN: 'inventory.scan',
   INACTIVE_CUSTOMERS_SCAN: 'customers.inactive.scan',
   SESSION_CLEANUP: 'sessions.cleanup',
+  META_WEBHOOK: 'meta.webhook',
+  WEBHOOK_FANOUT: 'webhook.fanout',
+  WEBHOOK_DELIVER: 'webhook.deliver',
 } as const;
 
 export const DEFAULT_JOB_OPTIONS: JobsOptions = {

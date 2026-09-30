@@ -92,7 +92,7 @@ export default function BillingPage() {
       qc.invalidateQueries({ queryKey: ['billing'] });
       refresh();
     },
-    onError: (err) => toast.error((err as Error).message || 'Could not change the plan'),
+    // Errors are shown once by the global mutation handler.
   });
   if (isLoading || !data) return <PageSkeleton />;
   const manage = can('billing.manage');

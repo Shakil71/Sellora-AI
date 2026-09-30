@@ -60,6 +60,7 @@ export const listInclude = {
   assignedUser: { select: { id: true, name: true, avatarUrl: true } },
   aiAgent: { select: { id: true, name: true, avatarUrl: true } },
   whatsappAccount: { select: { id: true, name: true, displayPhoneNumber: true } },
+  channelConnection: { select: { id: true, name: true, type: true } },
 } satisfies Prisma.ConversationInclude;
 
 const ACTIVE: ConversationStatus[] = [ConversationStatus.OPEN, ConversationStatus.PENDING];
@@ -152,7 +153,9 @@ export class ConversationsService {
       this.prisma.lead.findMany({ where: { tenantId, customerId: conversation.customerId }, orderBy: { createdAt: 'desc' }, take: 3, select: { id: true, name: true, status: true, score: true } }),
       this.prisma.task.findMany({ where: { tenantId, conversationId: id, status: { in: ['TODO', 'IN_PROGRESS'] } }, take: 5 }),
     ]);
-    const windowOpen = conversation.channel !== ChannelType.WHATSAPP || (conversation.lastInboundAt ? Date.now() - conversation.lastInboundAt.getTime() < 24 * 3600 * 1000 : false);
+    // WhatsApp, Messenger and Instagram only allow free-form replies for 24 hours after the customer's last message.
+    const windowed = conversation.channel === ChannelType.WHATSAPP || conversation.channel === ChannelType.MESSENGER || conversation.channel === ChannelType.INSTAGRAM;
+    const windowOpen = !windowed || (conversation.lastInboundAt ? Date.now() - conversation.lastInboundAt.getTime() < 24 * 3600 * 1000 : false);
     return { ...conversation, orders, leads, openTasks, windowOpen };
   }
 

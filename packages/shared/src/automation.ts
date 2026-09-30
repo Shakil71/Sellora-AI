@@ -52,7 +52,7 @@ const COMPARATORS = [
 export const WORKFLOW_TRIGGERS = [
   {
     key: 'message.received',
-    label: 'New WhatsApp message',
+    label: 'New message',
     description: 'A customer sends a message on a connected channel.',
     fields: [],
   },
@@ -185,7 +185,12 @@ export const WORKFLOW_CONDITIONS = [
         label: 'Channel',
         type: 'select',
         required: true,
-        options: [{ value: 'WHATSAPP', label: 'WhatsApp' }],
+        options: [
+          { value: 'WHATSAPP', label: 'WhatsApp' },
+          { value: 'WEB_CHAT', label: 'Website chat' },
+          { value: 'MESSENGER', label: 'Facebook Messenger' },
+          { value: 'INSTAGRAM', label: 'Instagram' },
+        ],
       },
     ],
   },
@@ -200,8 +205,8 @@ export const WORKFLOW_CONDITIONS = [
 export const WORKFLOW_ACTIONS = [
   {
     key: 'send_whatsapp_message',
-    label: 'Send WhatsApp message',
-    description: 'Send a text message to the customer. Supports {{customer.name}} and {{order.number}}.',
+    label: 'Send message',
+    description: 'Send a text message to the customer on their channel (WhatsApp, website chat, Messenger or Instagram). Supports {{customer.name}} and {{order.number}}.',
     fields: [{ key: 'message', label: 'Message', type: 'textarea', required: true }],
   },
   {

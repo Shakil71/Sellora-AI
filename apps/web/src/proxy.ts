@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 const PROTECTED = [
   '/dashboard', '/inbox', '/conversations', '/leads', '/customers', '/deals', '/pipelines', '/tasks',
   '/products', '/categories', '/inventory', '/orders', '/invoices', '/payments', '/deliveries',
-  '/whatsapp', '/ai', '/automation', '/analytics', '/settings', '/notifications', '/profile', '/admin', '/onboarding',
+  '/whatsapp', '/integrations', '/ai', '/automation', '/analytics', '/settings', '/notifications', '/profile', '/admin', '/onboarding',
 ];
 const AUTH_PAGES = ['/login', '/register'];
 

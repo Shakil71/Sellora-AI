@@ -27,6 +27,33 @@
 
 Without WhatsApp, use **Inbox → Test conversation** (flask icon) to try the full AI flow; nothing is sent externally.
 
+## 3a. Integrations (website chat, Messenger, Instagram, webhooks, API)
+
+Everything lives under **Integrations** in the sidebar (permission `integrations.view`; changes need `integrations.manage`, held by Owner and Admin). Every channel feeds the same inbox, AI agent, CRM, automations and analytics.
+
+### Website chat
+1. **Integrations → Website chat → Add website chat**: name, AI agent, title, greeting, brand colour, position, optional contact form and allowed websites.
+2. Copy the one-line embed code and paste it before `</body>` on your site. Guides for WordPress, Shopify, Wix, Squarespace, Webflow and Google Tag Manager are built in.
+3. Use **Preview** to try the real chat. Visitors appear as customers with source `web_chat`; the AI replies instantly and your team can take over from the inbox.
+
+The widget runs in an isolated frame, so your site's styles cannot break it, and it opens full screen on phones. JavaScript API: `SelloraChat.open()`, `.close()`, `.toggle()`; add `data-open="true"` to the script tag to open it on load. **Allowed websites** hides the chat on other domains in normal browsers. It is not a security boundary: the widget key is public, like any live-chat key.
+
+Security: visitors get a signed session token, only ever see their own conversation and never internal notes. Messages are rate limited per IP. A typed email is stored on the new customer but never merged into an existing customer automatically, because it is unverified.
+
+### Facebook Messenger and Instagram
+1. In developers.facebook.com create (or reuse) an app with the **Messenger** product (and **Instagram** for Instagram). Link your Instagram professional account to your Facebook Page.
+2. Generate a long-lived **Page access token** with `pages_messaging` (plus `instagram_manage_messages` for Instagram) and copy the **App secret**.
+3. **Integrations → Messenger / Instagram → Connect**: Page ID (and Instagram account ID), token, app secret and AI agent. Sellora checks the token and subscribes the Page to webhooks.
+4. Paste the shown **Callback URL** and **Verify token** into the app's webhook settings and subscribe to `messages` and `messaging_postbacks` (plus `message_deliveries` and `message_reads` for Messenger). HTTPS on a public domain is required.
+
+Meta allows free-form replies for 24 hours after the customer's last message; after that the composer explains why it is locked. Long AI replies are split automatically (Messenger 2,000 and Instagram 1,000 characters).
+
+### Outgoing webhooks
+**Integrations → Webhooks → Add endpoint** with an HTTPS URL and the events to send (or all events). Each delivery is a `POST` with JSON `{ id, event, createdAt, workspaceId, data }`, where `data` includes readable details: the order with items and totals, the customer, the lead or the product. Headers: `X-Sellora-Event`, `X-Sellora-Delivery`, `X-Sellora-Timestamp` and `X-Sellora-Signature: t=<unix>,v1=<hex>`, the HMAC-SHA256 of `<t>.<raw body>` with the endpoint secret. Reply 2xx within 10 seconds; failures are retried 6 times with exponential backoff (about an hour). After 20 consecutive failed events the endpoint is switched off and managers are notified. The delivery log shows status codes and response bodies and lets you redeliver. Private and LAN addresses are refused (SSRF protection).
+
+### Developer API
+**Integrations → Developer API** shows ready-to-copy cURL, JavaScript and PHP examples for syncing products and stock, sending contact forms as leads, creating customers and orders from your checkout and reading order status. Create keys in **Settings → API** with only the permissions each system needs.
+
 ## 4. AI configuration
 
 - **Settings → AI**: API key (or platform `OPENAI_API_KEY`), base URL for OpenAI-compatible providers, chat and embedding models, **Test connection**.
@@ -76,12 +103,12 @@ Execution: domain events are queued → matching active workflows create a `Work
 
 ## 9. Architecture & extension points
 
-- **Channels**: `MessagingChannel` interface (`apps/api/src/modules/channels/channel.types.ts`). WhatsApp and the internal test channel are implemented. To add web chat, Instagram, Messenger or Telegram: add a `ChannelType` enum value (migration), implement the interface, register it in `ChannelsService`, and add an inbound webhook that calls `InboundService.storeInbound`.
+- **Channels**: `MessagingChannel` interface (`apps/api/src/modules/channels/channel.types.ts`). WhatsApp, website chat, Messenger, Instagram and the internal test channel are implemented. To add another (for example Telegram): add a `ChannelType` enum value (migration), implement the interface, register it in `ChannelsService`, store a `ChannelConnection` and `ChannelContact`, and pass incoming messages to `InboundService.receiveOnConnection`.
 - **AI providers**: `LLMProvider` interface in `ai-provider.service.ts`.
 - **Storage**: `StorageProvider` (local, S3-compatible).
 - **Email**: `EmailProvider` (SMTP).
 - **Billing**: `PaymentProvider` (subscriptions) and `PaymentGateway` (order payments).
-- **Queues** (BullMQ, prefix `sellora`): `whatsapp`, `ai`, `notifications`, `documents`, `automation`, `analytics`, `dead-letter`.
+- **Queues** (BullMQ, prefix `sellora`): `whatsapp` (also sends replies on every channel), `ai`, `notifications`, `documents`, `automation`, `analytics`, `integrations` (Meta webhooks and outgoing webhook deliveries), `dead-letter`.
 
 ## 10. Observability
 

@@ -28,7 +28,18 @@ const nextConfig: NextConfig = {
   images: { unoptimized: true },
   async headers() {
     return [
-      { source: '/:path*', headers: securityHeaders },
+      // Every page refuses to be framed, except the website chat window that
+      // businesses embed on their own sites through /widget.js.
+      { source: '/((?!widget/).*)', headers: securityHeaders },
+      {
+        source: '/widget/:path*',
+        headers: [
+          ...securityHeaders.filter((h) => h.key !== 'X-Frame-Options'),
+          { key: 'Content-Security-Policy', value: 'frame-ancestors *' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+        ],
+      },
+      { source: '/widget.js', headers: [{ key: 'Cache-Control', value: 'public, max-age=300' }] },
       { source: '/(dashboard|inbox|settings|onboarding|install)(.*)', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] },
     ];
   },

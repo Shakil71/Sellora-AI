@@ -9,8 +9,9 @@ import { relative } from '@/lib/format';
 import { CONVERSATION_STATUS } from '@/lib/status';
 import type { Conversation } from '@/lib/types';
 import { PageHeader, StatusBadge } from '@/components/shared/page';
+import { ChannelBadge } from '@/components/shared/channel-badge';
 import { DataTable, FilterChips, SearchInput, Toolbar } from '@/components/shared/data-table';
-import { Avatar, Badge } from '@/components/ui/primitives';
+import { Avatar } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/overlays';
 
@@ -93,7 +94,7 @@ export default function ConversationsPage() {
               </div>
             ),
           },
-          { key: 'channel', header: 'Channel', hideBelow: 'lg', cell: (c) => <Badge variant="outline">{c.channel === 'TEST' ? 'Test' : 'WhatsApp'}</Badge> },
+          { key: 'channel', header: 'Channel', hideBelow: 'lg', cell: (c) => <ChannelBadge channel={c.channel} /> },
           {
             key: 'handler',
             header: 'Handled by',

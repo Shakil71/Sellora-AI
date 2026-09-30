@@ -102,6 +102,18 @@ export const WA_ACCOUNT_STATUS: StatusMap = {
   DISCONNECTED: { label: 'Disconnected', variant: 'muted' },
 };
 
+export const CHANNEL_CONNECTION_STATUS: StatusMap = {
+  CONNECTED: { label: 'Connected', variant: 'success' },
+  ERROR: { label: 'Needs attention', variant: 'destructive' },
+  DISABLED: { label: 'Turned off', variant: 'muted' },
+};
+
+export const WEBHOOK_DELIVERY_STATUS: StatusMap = {
+  PENDING: { label: 'Retrying', variant: 'warning' },
+  SUCCEEDED: { label: 'Delivered', variant: 'success' },
+  FAILED: { label: 'Failed', variant: 'destructive' },
+};
+
 export const TEMPLATE_STATUS: StatusMap = {
   DRAFT: { label: 'Draft', variant: 'muted' },
   PENDING: { label: 'In review', variant: 'warning' },

@@ -65,6 +65,16 @@ Accounts are normally connected per workspace in the UI. These act as platform d
 
 With all of the first three set, **WhatsApp → Accounts → Import from server config** creates the account.
 
+## Messenger, Instagram & webhooks
+
+Businesses connect their own Facebook Page or Instagram account in **Integrations**; these are optional platform-wide fallbacks.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `META_APP_SECRET` | — | App secret used to verify Messenger/Instagram webhook signatures when a connection has none (`WHATSAPP_APP_SECRET` is also accepted) |
+| `META_VERIFY_TOKEN` | — | Extra verify token accepted by `GET /api/v1/webhooks/meta` |
+| `WEBHOOKS_ALLOW_PRIVATE` | `false` | Allow outgoing webhooks to private/LAN addresses and plain HTTP. **Development only**: keep `false` in production |
+
 ## Email (SMTP)
 
 | Variable | Default | Description |

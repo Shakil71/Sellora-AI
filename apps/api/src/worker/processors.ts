@@ -12,6 +12,8 @@ import { KnowledgeService } from '../modules/ai/knowledge.service';
 import { MailService } from '../modules/mail/mail.service';
 import type { MailTemplate } from '../modules/mail/mail.templates';
 import { WorkflowEngineService } from '../modules/automation/workflow-engine.service';
+import { MetaWebhookService } from '../modules/integrations/meta-webhook.service';
+import { WebhooksService } from '../modules/integrations/webhooks.service';
 
 /** Shared failure handling: after the last attempt, jobs go to the dead-letter queue. */
 abstract class BaseProcessor extends WorkerHost {
@@ -192,15 +194,44 @@ export class MaintenanceProcessor extends BaseProcessor implements OnModuleInit 
         return this.engine.scanInactiveCustomers();
       case JOBS.SESSION_CLEANUP: {
         const cutoff = new Date(Date.now() - 7 * 86400_000);
-        const [sessions, tokens, webhooks] = await Promise.all([
+        const monthAgo = new Date(Date.now() - 30 * 86400_000);
+        const [sessions, tokens, webhooks, deliveries] = await Promise.all([
           this.prisma.session.deleteMany({ where: { OR: [{ expiresAt: { lt: new Date() } }, { revokedAt: { lt: cutoff } }] } }),
           this.prisma.verificationToken.deleteMany({ where: { expiresAt: { lt: cutoff } } }),
-          this.prisma.webhookEvent.deleteMany({ where: { createdAt: { lt: new Date(Date.now() - 30 * 86400_000) }, status: { in: ['PROCESSED', 'IGNORED'] } } }),
+          this.prisma.webhookEvent.deleteMany({ where: { createdAt: { lt: monthAgo }, status: { in: ['PROCESSED', 'IGNORED'] } } }),
+          this.prisma.webhookDelivery.deleteMany({ where: { createdAt: { lt: monthAgo } } }),
         ]);
-        return { sessions: sessions.count, tokens: tokens.count, webhooks: webhooks.count };
+        return { sessions: sessions.count, tokens: tokens.count, webhooks: webhooks.count, deliveries: deliveries.count };
       }
     }
   }
 }
 
-export const PROCESSORS = [WhatsAppProcessor, AIProcessor, NotificationsProcessor, DocumentsProcessor, AutomationProcessor, MaintenanceProcessor];
+/** Messenger/Instagram webhooks and outgoing webhook deliveries. */
+@Processor(QUEUES.INTEGRATIONS, { concurrency: 10 })
+@Injectable()
+export class IntegrationsProcessor extends BaseProcessor {
+  protected readonly logger = new Logger(IntegrationsProcessor.name);
+
+  constructor(
+    queues: QueueService,
+    private readonly meta: MetaWebhookService,
+    private readonly webhooks: WebhooksService,
+  ) {
+    super(queues);
+  }
+
+  async process(job: Job) {
+    switch (job.name) {
+      case JOBS.META_WEBHOOK:
+        return this.meta.process(job.data.eventId);
+      case JOBS.WEBHOOK_FANOUT:
+        return this.webhooks.fanout(job.data.tenantId, job.data.event, job.data.data ?? {});
+      case JOBS.WEBHOOK_DELIVER:
+        // attemptsMade counts earlier attempts, so +1 is this one.
+        return this.webhooks.deliver(job.data.deliveryId, job.attemptsMade + 1 >= (job.opts.attempts ?? 1));
+    }
+  }
+}
+
+export const PROCESSORS = [WhatsAppProcessor, AIProcessor, NotificationsProcessor, DocumentsProcessor, AutomationProcessor, MaintenanceProcessor, IntegrationsProcessor];

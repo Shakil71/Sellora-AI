@@ -76,6 +76,11 @@ const EnvSchema = z.object({
   WHATSAPP_BUSINESS_ACCOUNT_ID: optionalString,
   WHATSAPP_GRAPH_API_VERSION: z.string().default('v21.0'),
   WHATSAPP_GRAPH_BASE_URL: z.string().url().default('https://graph.facebook.com'),
+  // Facebook Messenger & Instagram (optional server-wide defaults; each connection can store its own)
+  META_APP_SECRET: optionalString,
+  META_VERIFY_TOKEN: optionalString,
+  // Outgoing webhooks: allow private/LAN target addresses (development only)
+  WEBHOOKS_ALLOW_PRIVATE: bool(false),
 
   SMTP_HOST: optionalString,
   SMTP_PORT: z.coerce.number().int().positive().default(587),

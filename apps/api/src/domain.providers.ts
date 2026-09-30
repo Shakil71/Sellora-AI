@@ -28,6 +28,11 @@ import { WorkflowEngineService } from './modules/automation/workflow-engine.serv
 import { AnalyticsService } from './modules/analytics/analytics.service';
 import { SearchService } from './modules/analytics/search.service';
 import { OnboardingService } from './modules/onboarding/onboarding.controller';
+import { MetaGraphClient } from './modules/integrations/meta-graph.client';
+import { ChannelConnectionsService } from './modules/integrations/channel-connections.service';
+import { MetaWebhookService } from './modules/integrations/meta-webhook.service';
+import { WebChatService } from './modules/integrations/webchat.service';
+import { WebhooksService } from './modules/integrations/webhooks.service';
 
 /** Business services registered in DomainModule (shared by API and worker). */
 export const DOMAIN_PROVIDERS: Provider[] = [
@@ -61,4 +66,9 @@ export const DOMAIN_PROVIDERS: Provider[] = [
   AnalyticsService,
   SearchService,
   OnboardingService,
+  MetaGraphClient,
+  ChannelConnectionsService,
+  MetaWebhookService,
+  WebChatService,
+  WebhooksService,
 ];

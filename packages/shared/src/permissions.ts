@@ -85,6 +85,13 @@ export const PERMISSION_GROUPS = [
     ],
   },
   {
+    group: 'Integrations',
+    permissions: [
+      { key: 'integrations.view', description: 'View connected channels, webhooks and API guides' },
+      { key: 'integrations.manage', description: 'Connect website chat, Messenger and Instagram, and manage webhooks' },
+    ],
+  },
+  {
     group: 'Automation',
     permissions: [
       { key: 'automation.view', description: 'View workflows and runs' },
@@ -171,6 +178,7 @@ export const SYSTEM_ROLES: Record<
       'billing.manage',
       'roles.manage',
       'api_keys.manage',
+      'integrations.manage',
       'users.update',
       'users.delete',
       'settings.update',

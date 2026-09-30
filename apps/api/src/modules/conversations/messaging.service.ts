@@ -145,8 +145,13 @@ export class MessagingService implements OnModuleInit {
       channel.customerServiceWindowMs === null ||
       (conversation.lastInboundAt !== null && Date.now() - conversation.lastInboundAt.getTime() < channel.customerServiceWindowMs);
     if (!windowOpen && !input.template) {
-      throw new ValidationError('The 24-hour customer service window has closed. Send an approved template to restart the conversation.');
+      throw new ValidationError(
+        conversation.channel === ChannelType.WHATSAPP
+          ? 'The 24-hour customer service window has closed. Send an approved template to restart the conversation.'
+          : `The 24-hour messaging window on ${channel.label} has closed. You can reply after the customer messages you again.`,
+      );
     }
+    if (input.template && conversation.channel !== ChannelType.WHATSAPP) throw new ValidationError('Templates are only available on WhatsApp.');
     const payload: OutboundPayload = input.template
       ? { kind: 'template', template: input.template }
       : input.attachment
@@ -166,7 +171,7 @@ export class MessagingService implements OnModuleInit {
   async deliver(tenantId: string, messageId: string) {
     const message = await this.prisma.message.findFirst({
       where: { id: messageId, tenantId },
-      include: { conversation: { include: { contact: true, customer: true } } },
+      include: { conversation: { include: { contact: true, customer: true, channelContact: true } } },
     });
     if (!message || message.status !== MessageStatus.PENDING) return;
     const conv = message.conversation;
@@ -176,7 +181,11 @@ export class MessagingService implements OnModuleInit {
       conversationId: conv.id,
       channel: conv.channel,
       whatsappAccountId: conv.whatsappAccountId,
-      recipient: conv.contact?.waId ?? conv.customer.whatsappNumber?.replace(/^\+/, '') ?? null,
+      channelConnectionId: conv.channelConnectionId,
+      recipient:
+        conv.channel === ChannelType.WHATSAPP || conv.channel === ChannelType.TEST
+          ? (conv.contact?.waId ?? conv.customer.whatsappNumber?.replace(/^\+/, '') ?? null)
+          : (conv.channelContact?.externalUserId ?? null),
     };
     try {
       const channel = this.channels.get(conv.channel);

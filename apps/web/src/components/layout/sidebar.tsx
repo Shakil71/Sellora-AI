@@ -16,6 +16,7 @@ function isActive(item: NavItem, pathname: string, search: string) {
     return pathname === path && search.includes(query!);
   }
   if (item.href === '/inbox') return pathname === '/inbox' && !search.includes('channel=');
+  if (item.exact) return pathname === item.href;
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 

@@ -154,7 +154,7 @@ export interface Order {
 
 export interface Conversation {
   id: string;
-  channel: 'WHATSAPP' | 'TEST';
+  channel: 'WHATSAPP' | 'TEST' | 'WEB_CHAT' | 'MESSENGER' | 'INSTAGRAM';
   status: 'OPEN' | 'PENDING' | 'RESOLVED' | 'CLOSED';
   handler: 'AI' | 'HUMAN';
   aiAgentId: string | null;
@@ -174,6 +174,8 @@ export interface Conversation {
   assignedUser: UserRef | null;
   aiAgent: { id: string; name: string; avatarUrl: string | null } | null;
   whatsappAccount: { id: string; name: string; displayPhoneNumber: string | null } | null;
+  /** Website chat, Messenger or Instagram connection */
+  channelConnection?: { id: string; name: string; type: string } | null;
 }
 
 export interface Message {

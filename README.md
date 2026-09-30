@@ -8,7 +8,9 @@ Sellora AI is a multi-tenant SaaS platform that turns WhatsApp conversations int
 
 - **AI Sales Agent** with a controlled tool system (search products, check stock, quote totals, create leads and orders, hand off to humans). Every tool call is authorized, validated and logged.
 - **WhatsApp Cloud API** integration with signed webhooks, delivery receipts, templates and the 24-hour window.
-- **Omnichannel inbox** with AI/human takeover, assignments, internal notes, attachments and realtime updates.
+- **More channels**: an embeddable website chat (one line of code for any site, including WordPress, Shopify and Wix), Facebook Messenger and Instagram Direct.
+- **Omnichannel inbox** with AI/human takeover, assignments, internal notes, attachments and realtime updates across every channel.
+- **Integrations for your own systems**: a REST API with scoped API keys and signed outgoing webhooks (orders, leads, messages, stock) with retries and a delivery log.
 - **CRM**: leads, customers, deals, drag-and-drop pipelines and tasks.
 - **Commerce**: products, categories, inventory with reservations, orders, payments, refunds, invoices (PDF) and deliveries.
 - **Knowledge base (RAG)**: PDF, DOCX, TXT, Markdown and web pages, with semantic or keyword retrieval.

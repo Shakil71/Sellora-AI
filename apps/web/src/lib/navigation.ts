@@ -41,6 +41,12 @@ import {
   Handshake,
   Smartphone,
   FileStack,
+  Plug,
+  Globe,
+  MessageSquareMore,
+  Camera,
+  Send,
+  Code2,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -50,6 +56,8 @@ export interface NavItem {
   permission?: string;
   /** Additional path prefixes that mark this item active */
   match?: string[];
+  /** Active only on this exact path (not its sub-pages) */
+  exact?: boolean;
 }
 
 export interface NavSection {
@@ -94,6 +102,17 @@ export const NAV_SECTIONS: NavSection[] = [
       { title: 'Templates', href: '/whatsapp/templates', icon: FileStack, permission: 'conversations.view' },
       { title: 'Contacts', href: '/whatsapp/contacts', icon: Contact, permission: 'whatsapp.view' },
       { title: 'Webhooks', href: '/whatsapp/webhooks', icon: Webhook, permission: 'whatsapp.view' },
+    ],
+  },
+  {
+    title: 'Integrations',
+    items: [
+      { title: 'Overview', href: '/integrations', icon: Plug, permission: 'integrations.view', exact: true },
+      { title: 'Website Chat', href: '/integrations/website-chat', icon: Globe, permission: 'integrations.view' },
+      { title: 'Messenger', href: '/integrations/messenger', icon: MessageSquareMore, permission: 'integrations.view' },
+      { title: 'Instagram', href: '/integrations/instagram', icon: Camera, permission: 'integrations.view' },
+      { title: 'Webhooks', href: '/integrations/webhooks', icon: Send, permission: 'integrations.view' },
+      { title: 'Developer API', href: '/integrations/api', icon: Code2, permission: 'integrations.view' },
     ],
   },
   {

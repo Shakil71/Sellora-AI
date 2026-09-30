@@ -25,6 +25,8 @@ export interface ToolContext {
   enabledTools: string[];
   /** Playground mode: write tools describe what they would do without changing data */
   dryRun: boolean;
+  /** Channel the customer is writing on (WHATSAPP, WEB_CHAT, MESSENGER, INSTAGRAM, TEST) */
+  channel?: string;
 }
 
 export interface ToolOutcome {

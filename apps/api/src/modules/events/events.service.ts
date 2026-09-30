@@ -3,22 +3,32 @@ import { Prisma } from '@prisma/client';
 import type { WorkflowTriggerKey } from '@sellora/shared';
 import { QueueService } from '../../queue/queue.module';
 import { PrismaService } from '../../prisma/prisma.service';
+import { WebhooksService } from '../integrations/webhooks.service';
 
 /**
  * Domain event bus. Events are pushed to the automation queue where matching
- * workflows are started. Emitting never fails the calling business action.
+ * workflows are started, and to the workspace's webhook endpoints.
+ * Emitting never fails the calling business action.
  */
 @Injectable()
 export class EventsService {
   private readonly logger = new Logger(EventsService.name);
 
-  constructor(private readonly queues: QueueService) {}
+  constructor(
+    private readonly queues: QueueService,
+    private readonly webhooks: WebhooksService,
+  ) {}
 
   async emit(tenantId: string, type: WorkflowTriggerKey, payload: Record<string, unknown>) {
     try {
       await this.queues.automationEvent(tenantId, type, payload);
     } catch (err) {
       this.logger.warn(`Could not publish event ${type}: ${(err as Error).message}`);
+    }
+    try {
+      if (await this.webhooks.hasActiveEndpoints(tenantId)) await this.queues.webhookFanout(tenantId, type, payload, new Date().toISOString());
+    } catch (err) {
+      this.logger.warn(`Could not queue webhooks for ${type}: ${(err as Error).message}`);
     }
   }
 }
