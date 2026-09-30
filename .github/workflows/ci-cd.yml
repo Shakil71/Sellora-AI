@@ -1,0 +1,129 @@
+# =============================================================================
+# Sellora AI — CI/CD (no Docker)
+#
+#   Every push and pull request: install, lint, typecheck, unit tests,
+#   integration tests (real PostgreSQL + Redis) and a production build.
+#
+#   Push to main (after CI passes): deploy to the VPS through a self-hosted
+#   runner installed on the server (label "sellora-vps"). The runner connects
+#   out to GitHub, so the server does not need a public IP or open SSH port.
+#   It runs deploy.sh, which backs up the database, runs non-destructive
+#   migrations, reloads PM2 and verifies health checks.
+# =============================================================================
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy to the VPS after CI passes
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  ci:
+    name: Lint, test & build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PGUSER: sellora
+      PGPASSWORD: sellora_ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Start PostgreSQL and Redis (native services)
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -qc "CREATE ROLE sellora LOGIN SUPERUSER PASSWORD 'sellora_ci';"
+          sudo -u postgres psql -qc "CREATE DATABASE sellora OWNER sellora;"
+          sudo -u postgres psql -qc "CREATE DATABASE sellora_test OWNER sellora;"
+          sudo apt-get update -qq && sudo apt-get install -y -qq redis-server
+          sudo systemctl start redis-server
+          redis-cli ping
+
+      - name: Create CI environment file
+        run: |
+          cp .env.example .env
+          sed -i \
+            -e "s|^NODE_ENV=.*|NODE_ENV=test|" \
+            -e "s|^DATABASE_URL=.*|DATABASE_URL=postgresql://sellora:sellora_ci@localhost:5432/sellora?schema=public|" \
+            -e "s|^REDIS_URL=.*|REDIS_URL=redis://localhost:6379|" \
+            -e "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -hex 48)|" \
+            -e "s|^JWT_REFRESH_SECRET=.*|JWT_REFRESH_SECRET=$(openssl rand -hex 48)|" \
+            -e "s|^ENCRYPTION_KEY=.*|ENCRYPTION_KEY=$(openssl rand -hex 32)|" \
+            .env
+          echo "DATABASE_URL_TEST=postgresql://sellora:sellora_ci@localhost:5432/sellora_test?schema=public" >> .env
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Generate Prisma client
+        run: npm run db:generate
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Migrate test database
+        working-directory: apps/api
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://sellora:sellora_ci@localhost:5432/sellora_test?schema=public
+
+      - name: Integration tests
+        run: npm run test:integration
+        env:
+          DATABASE_URL_TEST: postgresql://sellora:sellora_ci@localhost:5432/sellora_test?schema=public
+
+      - name: Production build
+        run: npm run build
+
+  deploy:
+    name: Deploy to VPS
+    needs: ci
+    # Enabled once the self-hosted runner is installed (repository variable
+    # DEPLOY_ENABLED=true). See docs/DEPLOYMENT.md, "Continuous deployment".
+    if: >-
+      vars.DEPLOY_ENABLED == 'true' &&
+      github.repository == 'Shakil71/Sellora-AI' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy))
+    runs-on: [self-hosted, sellora-vps]
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL }}
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - name: Deploy ${{ github.sha }}
+        run: |
+          cd /opt/sellora-ai/app
+          ./deploy.sh main
+          deployed="$(git rev-parse HEAD)"
+          echo "Deployed ${deployed}"
+          if [ "${deployed}" != "${GITHUB_SHA}" ]; then
+            echo "::notice::A newer commit (${deployed}) was deployed; ${GITHUB_SHA} is included."
+          fi

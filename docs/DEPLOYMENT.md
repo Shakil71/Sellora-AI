@@ -74,6 +74,36 @@ On Oracle Linux, Rocky, Alma or RHEL servers where Apache (httpd) already serves
 4. Copy `deploy/apache/sellora.conf` to `/etc/httpd/conf.d/`, replace the placeholders, run `apachectl configtest && systemctl reload httpd`, and open the port in firewalld (`firewall-cmd --permanent --add-port=<port>/tcp && firewall-cmd --reload`).
 5. Run `./deploy.sh` as the `sellora` user, then `pm2 startup systemd -u sellora --hp /home/sellora` as root.
 
+## Continuous deployment (GitHub Actions)
+
+`.github/workflows/ci-cd.yml` runs on every push and pull request: install, lint, typecheck, unit tests, integration tests against real PostgreSQL and Redis, and a production build. No Docker is used.
+
+Pushes to `main` are then deployed by the **Deploy to VPS** job, which runs `deploy.sh` on the server through a **self-hosted runner**. The runner connects out to GitHub, so it works for servers on private networks without opening SSH.
+
+### Enable it (once)
+
+1. On GitHub: **Settings → Actions → Runners → New self-hosted runner → Linux x64**. Copy the registration token it shows.
+2. On the VPS, as root:
+
+   ```bash
+   sudo -iu sellora bash -c 'mkdir -p ~/actions-runner && cd ~/actions-runner &&
+     curl -fsSL -o runner.tgz https://github.com/actions/runner/releases/download/v2.337.0/actions-runner-linux-x64-2.337.0.tar.gz &&
+     tar xzf runner.tgz && rm runner.tgz'
+   cd /home/sellora/actions-runner && ./bin/installdependencies.sh
+   sudo -u sellora ./config.sh --unattended --url https://github.com/<owner>/<repo>      --token <REGISTRATION_TOKEN> --name sellora-vps --labels sellora-vps --work _work
+   ./svc.sh install sellora && ./svc.sh start
+   ```
+
+3. On GitHub: **Settings → Secrets and variables → Actions → Variables**, add `DEPLOY_ENABLED` = `true` (and `PRODUCTION_URL`, shown on the deployment).
+
+From then on every push to `main` that passes CI is deployed automatically. **Actions → CI/CD → Run workflow** redeploys on demand.
+
+### Security
+
+- The runner runs as the unprivileged `sellora` user, never root.
+- The deploy job only runs for pushes to `main` of this repository, never for pull requests.
+- For a **public** repository, keep **Settings → Actions → Fork pull request workflows** on "Require approval for all external contributors" and review workflow changes in pull requests before approving them, because a workflow file decides which runner it uses. Making the repository private removes this risk.
+
 ## 3. Create the administrator
 
 Open `http://<server>/install` and complete the wizard, or run:
