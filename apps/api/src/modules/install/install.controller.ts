@@ -1,4 +1,14 @@
-import { Body, Controller, ForbiddenException, Get, Headers, HttpCode, Injectable, Logger, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Headers,
+  HttpCode,
+  Injectable,
+  Logger,
+  Post,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { PrismaClient } from '@prisma/client';
 import { execFile } from 'child_process';
@@ -23,8 +33,20 @@ import { safeEqual } from '../../common/utils/crypto.util';
 const run = promisify(execFile);
 const INSTALLED_KEY = 'installed';
 
-const dbSchema = z.object({ databaseUrl: z.string().trim().regex(/^postgres(ql)?:\/\//, 'Must start with postgresql://').max(500) });
-const redisSchema = z.object({ redisUrl: z.string().trim().regex(/^rediss?:\/\//, 'Must start with redis://').max(500) });
+const dbSchema = z.object({
+  databaseUrl: z
+    .string()
+    .trim()
+    .regex(/^postgres(ql)?:\/\//, 'Must start with postgresql://')
+    .max(500),
+});
+const redisSchema = z.object({
+  redisUrl: z
+    .string()
+    .trim()
+    .regex(/^rediss?:\/\//, 'Must start with redis://')
+    .max(500),
+});
 const envSchema = z.object({
   databaseUrl: dbSchema.shape.databaseUrl.optional(),
   redisUrl: redisSchema.shape.redisUrl.optional(),
@@ -86,21 +108,31 @@ export class InstallService {
   async assertNotInstalled(token?: string) {
     if (await this.isInstalled()) throw new ConflictError('Sellora AI is already installed.');
     if (env.INSTALLER_TOKEN && (!token || !safeEqual(token, env.INSTALLER_TOKEN))) {
-      throw new ForbiddenException({ code: 'INSTALLER_TOKEN', message: 'A valid installer token is required.' });
+      throw new ForbiddenException({
+        code: 'INSTALLER_TOKEN',
+        message: 'A valid installer token is required.',
+      });
     }
   }
 
   async status() {
     const installed = await this.isInstalled();
     const nodeMajor = Number(process.versions.node.split('.')[0]);
-    const [db, redis, storage] = await Promise.all([this.prisma.isHealthy(), this.redis.isHealthy(), this.storage.provider.isHealthy()]);
+    const [db, redis, storage] = await Promise.all([
+      this.prisma.isHealthy(),
+      this.redis.isHealthy(),
+      this.storage.provider.isHealthy(),
+    ]);
     let migrated = false;
     let hasAdmin = false;
     if (db) {
       try {
-        const rows = await this.prisma.$queryRaw<Array<{ count: bigint }>>`SELECT COUNT(*)::bigint AS count FROM "_prisma_migrations" WHERE finished_at IS NOT NULL`;
+        const rows = await this.prisma.$queryRaw<
+          Array<{ count: bigint }>
+        >`SELECT COUNT(*)::bigint AS count FROM "_prisma_migrations" WHERE finished_at IS NOT NULL`;
         migrated = Number(rows[0]?.count ?? 0) > 0;
-        if (migrated) hasAdmin = (await this.prisma.user.count({ where: { isSuperAdmin: true } })) > 0;
+        if (migrated)
+          hasAdmin = (await this.prisma.user.count({ where: { isSuperAdmin: true } })) > 0;
       } catch {
         migrated = false;
       }
@@ -109,16 +141,42 @@ export class InstallService {
       installed,
       tokenRequired: Boolean(env.INSTALLER_TOKEN),
       requirements: [
-        { key: 'node', label: `Node.js ${process.versions.node}`, ok: nodeMajor >= 20, hint: 'Node.js 20 or newer is required' },
+        {
+          key: 'node',
+          label: `Node.js ${process.versions.node}`,
+          ok: nodeMajor >= 20,
+          hint: 'Node.js 20 or newer is required',
+        },
         { key: 'database', label: 'PostgreSQL connection', ok: db, hint: 'Check DATABASE_URL' },
         { key: 'redis', label: 'Redis connection', ok: redis, hint: 'Check REDIS_URL' },
-        { key: 'storage', label: `File storage (${this.storage.provider.driver})`, ok: storage, hint: 'Storage path must be writable' },
-        { key: 'secrets', label: 'Security keys', ok: Boolean(env.JWT_SECRET && env.ENCRYPTION_KEY), hint: 'JWT_SECRET and ENCRYPTION_KEY must be set' },
-        { key: 'envFile', label: '.env file writable', ok: this.envWritable(), hint: `Make ${this.envPath()} writable during installation` },
+        {
+          key: 'storage',
+          label: `File storage (${this.storage.provider.driver})`,
+          ok: storage,
+          hint: 'Storage path must be writable',
+        },
+        {
+          key: 'secrets',
+          label: 'Security keys',
+          ok: Boolean(env.JWT_SECRET && env.ENCRYPTION_KEY),
+          hint: 'JWT_SECRET and ENCRYPTION_KEY must be set',
+        },
+        {
+          key: 'envFile',
+          label: '.env file writable',
+          ok: this.envWritable(),
+          hint: `Make ${this.envPath()} writable during installation`,
+        },
       ],
       migrated,
       hasAdmin,
-      config: { appUrl: env.APP_URL, apiUrl: env.API_URL, smtpConfigured: Boolean(env.SMTP_HOST), aiConfigured: Boolean(env.OPENAI_API_KEY) },
+      serverConfigured: db && redis,
+      config: {
+        appUrl: env.APP_URL,
+        apiUrl: env.API_URL,
+        smtpConfigured: Boolean(env.SMTP_HOST),
+        aiConfigured: Boolean(env.OPENAI_API_KEY),
+      },
     };
   }
 
@@ -140,14 +198,22 @@ export class InstallService {
       const version = await client.$queryRaw<Array<{ version: string }>>`SELECT version()`;
       return { ok: true, version: version[0]?.version?.split(',')[0] };
     } catch (err) {
-      return { ok: false, error: (err as Error).message.split('\n').slice(-2).join(' ').slice(0, 300) };
+      return {
+        ok: false,
+        error: (err as Error).message.split('\n').slice(-2).join(' ').slice(0, 300),
+      };
     } finally {
       await client.$disconnect().catch(() => undefined);
     }
   }
 
   async testRedis(url: string) {
-    const client = new IORedis(url, { lazyConnect: true, maxRetriesPerRequest: 1, connectTimeout: 4000, retryStrategy: () => null });
+    const client = new IORedis(url, {
+      lazyConnect: true,
+      maxRetriesPerRequest: 1,
+      connectTimeout: 4000,
+      retryStrategy: () => null,
+    });
     try {
       await client.connect();
       const info = await client.info('server');
@@ -159,16 +225,23 @@ export class InstallService {
     }
   }
 
-  /** Merges values into .env (secrets are generated when missing). A restart is needed afterwards. */
-  writeEnvironment(input: z.infer<typeof envSchema>) {
+  /**
+   * Merges values into .env (secrets are generated when missing). A restart is
+   * needed afterwards. On a server whose database and Redis already work, the
+   * connection settings and public URLs are never replaced from the browser:
+   * a typo there would take the whole installation offline.
+   */
+  async writeEnvironment(input: z.infer<typeof envSchema>) {
     const file = this.envPath();
+    const [dbUp, redisUp] = await Promise.all([this.prisma.isHealthy(), this.redis.isHealthy()]);
+    const locked = dbUp && redisUp;
     const existing = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
     const updates: Record<string, string | undefined> = {
-      DATABASE_URL: input.databaseUrl,
-      REDIS_URL: input.redisUrl,
-      APP_URL: input.appUrl,
-      API_URL: input.apiUrl,
-      CORS_ORIGINS: input.appUrl,
+      DATABASE_URL: locked ? undefined : input.databaseUrl,
+      REDIS_URL: locked ? undefined : input.redisUrl,
+      APP_URL: locked ? undefined : input.appUrl,
+      API_URL: locked ? undefined : input.apiUrl,
+      CORS_ORIGINS: locked ? undefined : input.appUrl,
       SMTP_HOST: input.smtpHost,
       SMTP_PORT: input.smtpPort ? String(input.smtpPort) : undefined,
       SMTP_USER: input.smtpUser,
@@ -177,8 +250,10 @@ export class InstallService {
       OPENAI_API_KEY: input.openaiApiKey,
     };
     if (!/^JWT_SECRET=.+/m.test(existing)) updates.JWT_SECRET = randomBytes(48).toString('hex');
-    if (!/^JWT_REFRESH_SECRET=.+/m.test(existing)) updates.JWT_REFRESH_SECRET = randomBytes(48).toString('hex');
-    if (!/^ENCRYPTION_KEY=.+/m.test(existing)) updates.ENCRYPTION_KEY = randomBytes(32).toString('hex');
+    if (!/^JWT_REFRESH_SECRET=.+/m.test(existing))
+      updates.JWT_REFRESH_SECRET = randomBytes(48).toString('hex');
+    if (!/^ENCRYPTION_KEY=.+/m.test(existing))
+      updates.ENCRYPTION_KEY = randomBytes(32).toString('hex');
     let content = existing;
     const written: string[] = [];
     for (const [key, value] of Object.entries(updates)) {
@@ -189,37 +264,63 @@ export class InstallService {
       written.push(key);
     }
     fs.writeFileSync(file, content.endsWith('\n') ? content : `${content}\n`, { mode: 0o600 });
-    return { written, file, restartRequired: true };
+    return { written, file, restartRequired: written.length > 0, protectedKeys: locked };
   }
 
   /** Runs `prisma migrate deploy` (never a destructive reset). */
   async migrate() {
     const apiRoot = path.resolve(__dirname, '../../..');
-    const prismaBin = [path.join(apiRoot, 'node_modules/.bin/prisma'), path.resolve(apiRoot, '../../node_modules/.bin/prisma')].find((p) => fs.existsSync(p) || fs.existsSync(`${p}.cmd`));
-    if (!prismaBin) throw new AppException('PRISMA_MISSING', 'Prisma CLI not found. Run "npm install" first.', 500);
+    const prismaBin = [
+      path.join(apiRoot, 'node_modules/.bin/prisma'),
+      path.resolve(apiRoot, '../../node_modules/.bin/prisma'),
+    ].find((p) => fs.existsSync(p) || fs.existsSync(`${p}.cmd`));
+    if (!prismaBin)
+      throw new AppException(
+        'PRISMA_MISSING',
+        'Prisma CLI not found. Run "npm install" first.',
+        500,
+      );
     const bin = process.platform === 'win32' ? `${prismaBin}.cmd` : prismaBin;
     try {
-      const { stdout, stderr } = await run(bin, ['migrate', 'deploy', '--schema', path.join(apiRoot, 'prisma/schema.prisma')], {
-        cwd: apiRoot,
-        env: { ...process.env },
-        timeout: 5 * 60_000,
-        shell: process.platform === 'win32',
-      });
+      const { stdout, stderr } = await run(
+        bin,
+        ['migrate', 'deploy', '--schema', path.join(apiRoot, 'prisma/schema.prisma')],
+        {
+          cwd: apiRoot,
+          env: { ...process.env },
+          timeout: 5 * 60_000,
+          shell: process.platform === 'win32',
+        },
+      );
       await this.permissions.sync();
       return { ok: true, output: `${stdout}\n${stderr}`.trim().split('\n').slice(-15).join('\n') };
     } catch (err) {
       const e = err as { stdout?: string; stderr?: string; message: string };
-      return { ok: false, output: `${e.stdout ?? ''}\n${e.stderr ?? e.message}`.trim().split('\n').slice(-20).join('\n') };
+      return {
+        ok: false,
+        output: `${e.stdout ?? ''}\n${e.stderr ?? e.message}`
+          .trim()
+          .split('\n')
+          .slice(-20)
+          .join('\n'),
+      };
     }
   }
 
   async createAdmin(input: z.infer<typeof adminSchema>) {
-    if ((await this.prisma.user.count({ where: { isSuperAdmin: true } })) > 0) throw new ConflictError('A platform administrator already exists.');
+    if ((await this.prisma.user.count({ where: { isSuperAdmin: true } })) > 0)
+      throw new ConflictError('A platform administrator already exists.');
     await this.permissions.sync();
     const existing = await this.prisma.user.findUnique({ where: { email: input.email } });
     if (existing) throw new ConflictError('A user with this email already exists.');
     const user = await this.prisma.user.create({
-      data: { email: input.email, name: input.name, passwordHash: await this.auth.hashPassword(input.password), isSuperAdmin: true, emailVerifiedAt: new Date() },
+      data: {
+        email: input.email,
+        name: input.name,
+        passwordHash: await this.auth.hashPassword(input.password),
+        isSuperAdmin: true,
+        emailVerifiedAt: new Date(),
+      },
     });
     const tenant = await this.tenants.provision(user.id, { name: input.workspaceName });
     return { userId: user.id, tenantId: tenant.id };
@@ -231,7 +332,13 @@ export class InstallService {
     }
     await this.prisma.systemSetting.upsert({
       where: { key: INSTALLED_KEY },
-      create: { key: INSTALLED_KEY, value: { at: new Date().toISOString(), version: process.env.npm_package_version ?? '1.0.0' } },
+      create: {
+        key: INSTALLED_KEY,
+        value: {
+          at: new Date().toISOString(),
+          version: process.env.npm_package_version ?? '1.0.0',
+        },
+      },
       update: { value: { at: new Date().toISOString() } },
     });
     try {
@@ -258,21 +365,30 @@ export class InstallController {
 
   @Post('test-database')
   @HttpCode(200)
-  async testDb(@Headers('x-installer-token') token: string | undefined, @Body(zBody(dbSchema)) body: z.infer<typeof dbSchema>) {
+  async testDb(
+    @Headers('x-installer-token') token: string | undefined,
+    @Body(zBody(dbSchema)) body: z.infer<typeof dbSchema>,
+  ) {
     await this.install.assertNotInstalled(token);
     return this.install.testDatabase(body.databaseUrl);
   }
 
   @Post('test-redis')
   @HttpCode(200)
-  async testRedis(@Headers('x-installer-token') token: string | undefined, @Body(zBody(redisSchema)) body: z.infer<typeof redisSchema>) {
+  async testRedis(
+    @Headers('x-installer-token') token: string | undefined,
+    @Body(zBody(redisSchema)) body: z.infer<typeof redisSchema>,
+  ) {
     await this.install.assertNotInstalled(token);
     return this.install.testRedis(body.redisUrl);
   }
 
   @Post('environment')
   @HttpCode(200)
-  async environment(@Headers('x-installer-token') token: string | undefined, @Body(zBody(envSchema)) body: z.infer<typeof envSchema>) {
+  async environment(
+    @Headers('x-installer-token') token: string | undefined,
+    @Body(zBody(envSchema)) body: z.infer<typeof envSchema>,
+  ) {
     await this.install.assertNotInstalled(token);
     return this.install.writeEnvironment(body);
   }
@@ -286,7 +402,10 @@ export class InstallController {
 
   @Post('admin')
   @HttpCode(200)
-  async admin(@Headers('x-installer-token') token: string | undefined, @Body(zBody(adminSchema)) body: z.infer<typeof adminSchema>) {
+  async admin(
+    @Headers('x-installer-token') token: string | undefined,
+    @Body(zBody(adminSchema)) body: z.infer<typeof adminSchema>,
+  ) {
     await this.install.assertNotInstalled(token);
     return this.install.createAdmin(body);
   }
