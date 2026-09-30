@@ -3,9 +3,9 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { filterNav, type NavItem } from '@/lib/navigation';
+import { filterNav, type NavItem, type NavSection } from '@/lib/navigation';
 import { useSession } from '@/components/session';
 import { Logo, LogoMark } from '@/components/brand/logo';
 import { Badge, Tooltip } from '@/components/ui/primitives';
@@ -19,18 +19,36 @@ function isActive(item: NavItem, pathname: string, search: string) {
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 
-export function SidebarNav({ collapsed = false, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
+/** Shown only to the platform administrator (super admin). */
+const PLATFORM_SECTION: NavSection = {
+  title: 'Platform',
+  items: [{ title: 'Platform admin', href: '/admin', icon: ShieldCheck }],
+};
+
+export function SidebarNav({
+  collapsed = false,
+  onNavigate,
+}: {
+  collapsed?: boolean;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.toString();
-  const { can } = useSession();
-  const sections = filterNav(can);
+  const { can, me } = useSession();
+  const sections = me.user.isSuperAdmin ? [PLATFORM_SECTION, ...filterNav(can)] : filterNav(can);
   return (
-    <nav aria-label="Main" className="flex-1 space-y-4 overflow-y-auto px-2 py-3 scrollbar-thin">
+    <nav aria-label="Main" className="flex-1 scrollbar-thin space-y-4 overflow-y-auto px-2 py-3">
       {sections.map((section) => (
         <div key={section.title || 'main'}>
-          {section.title && !collapsed && <p className="px-2.5 pb-1 text-[11px] font-semibold tracking-wider text-muted-foreground/80 uppercase">{section.title}</p>}
-          {section.title && collapsed && <div className="mx-auto my-2 h-px w-6 bg-sidebar-border" />}
+          {section.title && !collapsed && (
+            <p className="px-2.5 pb-1 text-[11px] font-semibold tracking-wider text-muted-foreground/80 uppercase">
+              {section.title}
+            </p>
+          )}
+          {section.title && collapsed && (
+            <div className="mx-auto my-2 h-px w-6 bg-sidebar-border" />
+          )}
           <ul className="space-y-0.5">
             {section.items.map((item) => {
               const active = isActive(item, pathname, search);
@@ -42,10 +60,18 @@ export function SidebarNav({ collapsed = false, onNavigate }: { collapsed?: bool
                   className={cn(
                     'flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13.5px] font-medium transition-colors',
                     collapsed && 'justify-center px-0',
-                    active ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
+                    active
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                      : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
                   )}
                 >
-                  <item.icon className={cn('size-4 shrink-0', active ? 'text-primary' : 'text-muted-foreground')} aria-hidden />
+                  <item.icon
+                    className={cn(
+                      'size-4 shrink-0',
+                      active ? 'text-primary' : 'text-muted-foreground',
+                    )}
+                    aria-hidden
+                  />
                   {!collapsed && <span className="truncate">{item.title}</span>}
                 </Link>
               );
@@ -86,7 +112,13 @@ export function WorkspaceCard({ collapsed }: { collapsed?: boolean }) {
   );
 }
 
-export function DesktopSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+export function DesktopSidebar({
+  collapsed,
+  onToggle,
+}: {
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
   return (
     <aside
       className={cn(
@@ -94,12 +126,21 @@ export function DesktopSidebar({ collapsed, onToggle }: { collapsed: boolean; on
         collapsed ? 'w-[60px]' : 'w-64',
       )}
     >
-      <div className={cn('flex h-14 items-center border-b px-3', collapsed ? 'justify-center' : 'justify-between')}>
+      <div
+        className={cn(
+          'flex h-14 items-center border-b px-3',
+          collapsed ? 'justify-center' : 'justify-between',
+        )}
+      >
         <Link href="/dashboard" aria-label="Sellora AI dashboard">
           {collapsed ? <LogoMark size={28} /> : <Logo />}
         </Link>
         {!collapsed && (
-          <button onClick={onToggle} className="rounded-md p-1.5 text-muted-foreground hover:bg-sidebar-accent hover:text-foreground" aria-label="Collapse sidebar">
+          <button
+            onClick={onToggle}
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
+            aria-label="Collapse sidebar"
+          >
             <PanelLeftClose className="size-4" />
           </button>
         )}
@@ -109,7 +150,11 @@ export function DesktopSidebar({ collapsed, onToggle }: { collapsed: boolean; on
       </React.Suspense>
       <WorkspaceCard collapsed={collapsed} />
       {collapsed && (
-        <button onClick={onToggle} className="mx-auto mb-3 rounded-md p-2 text-muted-foreground hover:bg-sidebar-accent" aria-label="Expand sidebar">
+        <button
+          onClick={onToggle}
+          className="mx-auto mb-3 rounded-md p-2 text-muted-foreground hover:bg-sidebar-accent"
+          aria-label="Expand sidebar"
+        >
           <PanelLeftOpen className="size-4" />
         </button>
       )}
