@@ -14,21 +14,25 @@ const NAV = [
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6">
-        <Link href="/" aria-label="Sellora AI home">
+      <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6 lg:grid lg:grid-cols-[1fr_auto_1fr]">
+        <Link href="/" aria-label="Sellora AI home" className="justify-self-start">
           <Logo />
         </Link>
         <nav
           aria-label="Main"
-          className="hidden items-center gap-6 text-sm text-muted-foreground md:flex"
+          className="hidden items-center gap-1 text-sm text-muted-foreground lg:flex xl:gap-2"
         >
           {NAV.map((n) => (
-            <Link key={n.href} href={n.href} className="hover:text-foreground">
+            <Link
+              key={n.href}
+              href={n.href}
+              className="rounded-md px-3 py-1.5 font-medium transition-colors hover:bg-muted hover:text-foreground"
+            >
               {n.label}
             </Link>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+        <div className="ml-auto flex items-center gap-1.5 justify-self-end sm:gap-2 lg:ml-0">
           <ThemeToggle />
           <Button variant="ghost" asChild className="hidden sm:inline-flex">
             <Link href="/login">Sign in</Link>
