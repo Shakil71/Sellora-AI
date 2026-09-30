@@ -64,6 +64,16 @@ cd /opt/sellora-ai/app
 
 Re-run it for every update.
 
+## Alternative: RHEL-family server with Apache already running
+
+On Oracle Linux, Rocky, Alma or RHEL servers where Apache (httpd) already serves other sites, keep Apache and give Sellora its own port:
+
+1. Install PostgreSQL 16 (`dnf module enable -y postgresql:16 && dnf install -y postgresql-server postgresql-contrib && postgresql-setup --initdb`), enable password auth (`scram-sha-256`) for `127.0.0.1` in `pg_hba.conf`, start it, then create the `sellora` role and database.
+2. Install PM2 (`npm install -g pm2`) and create a `sellora` user that owns `/opt/sellora-ai`.
+3. In `/opt/sellora-ai/.env`, choose free ports with `API_PORT` and `WEB_PORT`, set `API_INTERNAL_URL=http://127.0.0.1:<API_PORT>`, and use a spare Redis database number (for example `REDIS_URL=redis://127.0.0.1:6379/3`) if other apps share Redis.
+4. Copy `deploy/apache/sellora.conf` to `/etc/httpd/conf.d/`, replace the placeholders, run `apachectl configtest && systemctl reload httpd`, and open the port in firewalld (`firewall-cmd --permanent --add-port=<port>/tcp && firewall-cmd --reload`).
+5. Run `./deploy.sh` as the `sellora` user, then `pm2 startup systemd -u sellora --hp /home/sellora` as root.
+
 ## 3. Create the administrator
 
 Open `http://<server>/install` and complete the wizard, or run:

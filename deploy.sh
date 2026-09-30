@@ -18,7 +18,6 @@ APP_DIR="${BASE_DIR}/app"
 ENV_FILE="${BASE_DIR}/.env"
 LOG_DIR="${BASE_DIR}/logs"
 BRANCH="${1:-main}"
-HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:4000}"
 
 log()  { printf '\033[1;36m[deploy]\033[0m %s\n' "$*"; }
 fail() { printf '\033[1;31m[deploy] %s\033[0m\n' "$*" >&2; exit 1; }
@@ -43,6 +42,10 @@ for key in "${required[@]}"; do
 done
 grep -qE '^NODE_ENV=production' "${ENV_FILE}" || fail "NODE_ENV must be production"
 [[ "$(grep -E '^ENCRYPTION_KEY=' "${ENV_FILE}" | cut -d= -f2 | tr -d '"' | wc -c)" -ge 65 ]] || fail "ENCRYPTION_KEY must be 64 hex characters"
+env_get() { grep -E "^$1=" "${ENV_FILE}" | tail -n1 | cut -d= -f2- | tr -d '"' ; }
+API_PORT="$(env_get API_PORT)"; API_PORT="${API_PORT:-4000}"
+WEB_PORT="$(env_get WEB_PORT)"; WEB_PORT="${WEB_PORT:-3000}"
+HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:${API_PORT}}"
 node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 20 ? 0 : 1)' || fail "Node.js 20+ is required"
 mkdir -p "${LOG_DIR}" "${BASE_DIR}/backups" "${APP_DIR}/storage/uploads"
 
@@ -82,7 +85,7 @@ done
 curl -sS "${HEALTH_URL}/health" || true; echo
 curl -sS "${HEALTH_URL}/health/ready" || true; echo
 [[ "${ok}" == "1" ]] || fail "Health checks did not pass. Inspect: pm2 logs sellora-api --lines 100"
-curl -fsS -o /dev/null http://127.0.0.1:3000/ || fail "Web app is not responding on port 3000"
+curl -fsS -o /dev/null "http://127.0.0.1:${WEB_PORT}/" || fail "Web app is not responding on port ${WEB_PORT}"
 
 # 8. Status ---------------------------------------------------------------------------
 pm2 status

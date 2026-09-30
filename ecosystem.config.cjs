@@ -10,6 +10,21 @@
 const path = require('path');
 
 const ROOT = __dirname;
+
+/** Read a key from the project .env without requiring extra dependencies. */
+function envValue(key, fallback) {
+  if (process.env[key]) return process.env[key];
+  try {
+    const text = require('fs').readFileSync(path.join(ROOT, '.env'), 'utf8');
+    const match = text.match(new RegExp('^' + key + '=(.*)$', 'm'));
+    if (match) return match[1].trim().replace(/^["']|["']$/g, '') || fallback;
+  } catch {
+    /* no .env: use the fallback */
+  }
+  return fallback;
+}
+
+const WEB_PORT = envValue('WEB_PORT', '3000');
 const LOG_DIR = process.env.SELLORA_LOG_DIR || path.resolve(ROOT, '..', 'logs');
 
 const common = {
@@ -49,7 +64,7 @@ module.exports = {
       name: 'sellora-web',
       cwd: path.join(ROOT, 'apps/web'),
       script: path.join(ROOT, 'node_modules/next/dist/bin/next'),
-      args: 'start --port 3000 --hostname 127.0.0.1',
+      args: `start --port ${WEB_PORT} --hostname 127.0.0.1`,
       max_memory_restart: '700M',
       out_file: path.join(LOG_DIR, 'web.out.log'),
       error_file: path.join(LOG_DIR, 'web.err.log'),
