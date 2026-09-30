@@ -49,6 +49,15 @@ HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:${API_PORT}}"
 node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 20 ? 0 : 1)' || fail "Node.js 20+ is required"
 mkdir -p "${LOG_DIR}" "${BASE_DIR}/backups" "${APP_DIR}/storage/uploads"
 
+# Fail fast with a clear message when the database login in .env is wrong,
+# instead of failing after a full build.
+if command -v psql >/dev/null 2>&1; then
+  DB_URL="$(env_get DATABASE_URL)"
+  if ! PGCONNECT_TIMEOUT=5 psql "${DB_URL%%\?*}" -tAc 'SELECT 1' >/dev/null 2>&1; then
+    fail "Cannot connect to PostgreSQL with DATABASE_URL from ${ENV_FILE}. Check the user, password, host and database name."
+  fi
+fi
+
 # 3. Install & build -------------------------------------------------------------
 log "Installing dependencies"
 npm ci --no-audit --no-fund
