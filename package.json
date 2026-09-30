@@ -1,0 +1,40 @@
+{
+  "name": "sellora-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sellora AI — AI-Powered WhatsApp Sales & Commerce Automation",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run build -w @sellora/shared && concurrently -n api,worker,web -c cyan,magenta,green \"npm run dev -w @sellora/api\" \"npm run dev:worker -w @sellora/api\" \"npm run dev -w @sellora/web\"",
+    "build": "npm run build -w @sellora/shared && npm run build -w @sellora/api && npm run build -w @sellora/web",
+    "build:shared": "npm run build -w @sellora/shared",
+    "lint": "npm run lint -w @sellora/api && npm run lint -w @sellora/web",
+    "typecheck": "npm run build -w @sellora/shared && npm run typecheck -w @sellora/api && npm run typecheck -w @sellora/web",
+    "test": "npm run test -w @sellora/shared && npm run test -w @sellora/api",
+    "test:integration": "npm run test:integration -w @sellora/api",
+    "test:e2e": "npm run test:e2e -w @sellora/web",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "npm run db:generate -w @sellora/api",
+    "db:migrate": "npm run db:migrate -w @sellora/api",
+    "db:deploy": "npm run db:deploy -w @sellora/api",
+    "db:seed": "npm run db:seed -w @sellora/api",
+    "db:seed:demo": "npm run db:seed:demo -w @sellora/api",
+    "db:studio": "npm run db:studio -w @sellora/api",
+    "start:api": "npm run start:prod -w @sellora/api",
+    "start:worker": "npm run start:worker -w @sellora/api",
+    "start:web": "npm run start -w @sellora/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.6.14"
+  }
+}

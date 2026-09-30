@@ -1,0 +1,201 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Sellora AI design tokens.
+ * Brand: deep teal ("Sellora teal") for primary actions, violet reserved for AI,
+ * zinc neutrals for surfaces. All components read these tokens so light and
+ * dark themes stay consistent.
+ */
+:root {
+  --radius: 0.625rem;
+
+  --background: oklch(0.985 0.002 247);
+  --foreground: oklch(0.2 0.015 257);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.015 257);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.015 257);
+
+  --primary: oklch(0.51 0.105 183);
+  --primary-foreground: oklch(0.985 0.01 180);
+  --secondary: oklch(0.965 0.005 247);
+  --secondary-foreground: oklch(0.25 0.015 257);
+  --muted: oklch(0.965 0.005 247);
+  --muted-foreground: oklch(0.52 0.018 257);
+  --accent: oklch(0.955 0.012 190);
+  --accent-foreground: oklch(0.3 0.05 190);
+
+  --destructive: oklch(0.58 0.215 27);
+  --destructive-foreground: oklch(0.985 0 0);
+  --success: oklch(0.6 0.14 155);
+  --warning: oklch(0.75 0.15 75);
+  --info: oklch(0.6 0.13 240);
+  --ai: oklch(0.56 0.19 292);
+  --ai-soft: oklch(0.96 0.03 292);
+
+  --border: oklch(0.915 0.006 247);
+  --input: oklch(0.9 0.008 247);
+  --ring: oklch(0.51 0.105 183);
+
+  --chart-1: #00917f;
+  --chart-2: #7a4fd6;
+  --chart-3: #eb6834;
+  --chart-grid: oklch(0.92 0.004 247);
+
+  --sidebar: oklch(0.99 0.002 247);
+  --sidebar-foreground: oklch(0.3 0.015 257);
+  --sidebar-accent: oklch(0.955 0.008 190);
+  --sidebar-accent-foreground: oklch(0.25 0.03 190);
+  --sidebar-border: oklch(0.925 0.006 247);
+}
+
+.dark {
+  --background: oklch(0.155 0.008 257);
+  --foreground: oklch(0.95 0.005 247);
+  --card: oklch(0.19 0.009 257);
+  --card-foreground: oklch(0.95 0.005 247);
+  --popover: oklch(0.2 0.01 257);
+  --popover-foreground: oklch(0.95 0.005 247);
+
+  --primary: oklch(0.72 0.12 180);
+  --primary-foreground: oklch(0.17 0.03 185);
+  --secondary: oklch(0.25 0.01 257);
+  --secondary-foreground: oklch(0.93 0.005 247);
+  --muted: oklch(0.24 0.01 257);
+  --muted-foreground: oklch(0.7 0.015 257);
+  --accent: oklch(0.27 0.03 190);
+  --accent-foreground: oklch(0.93 0.03 185);
+
+  --destructive: oklch(0.66 0.19 25);
+  --destructive-foreground: oklch(0.985 0 0);
+  --success: oklch(0.7 0.15 155);
+  --warning: oklch(0.8 0.14 80);
+  --info: oklch(0.7 0.12 240);
+  --ai: oklch(0.72 0.16 292);
+  --ai-soft: oklch(0.28 0.06 292);
+
+  --border: oklch(0.28 0.01 257);
+  --input: oklch(0.31 0.012 257);
+  --ring: oklch(0.72 0.12 180);
+
+  --chart-1: #1ba592;
+  --chart-2: #9a7cf0;
+  --chart-3: #d95926;
+  --chart-grid: oklch(0.3 0.008 257);
+
+  --sidebar: oklch(0.17 0.008 257);
+  --sidebar-foreground: oklch(0.85 0.008 247);
+  --sidebar-accent: oklch(0.25 0.02 200);
+  --sidebar-accent-foreground: oklch(0.95 0.02 185);
+  --sidebar-border: oklch(0.26 0.01 257);
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-ai: var(--ai);
+  --color-ai-soft: var(--ai-soft);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-grid: var(--chart-grid);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+    overflow-x: hidden;
+  }
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 25%, transparent);
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--muted-foreground) 35%, transparent) transparent;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, color-mix(in oklch, var(--border) 70%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklch, var(--border) 70%, transparent) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

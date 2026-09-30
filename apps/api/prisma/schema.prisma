@@ -1,0 +1,1573 @@
+// Sellora AI — database schema
+// Every tenant-owned model carries `tenantId` and is always queried with it.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  DISABLED
+}
+
+enum TokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+  INVITATION
+}
+
+enum ActorType {
+  USER
+  API_KEY
+  SYSTEM
+  AI
+}
+
+enum SubscriptionPlan {
+  FREE
+  STARTER
+  PRO
+  BUSINESS
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+enum ChannelType {
+  WHATSAPP
+  TEST
+}
+
+enum WhatsAppAccountStatus {
+  PENDING
+  CONNECTED
+  ERROR
+  DISCONNECTED
+}
+
+enum ConversationStatus {
+  OPEN
+  PENDING
+  RESOLVED
+  CLOSED
+}
+
+enum ConversationHandler {
+  AI
+  HUMAN
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageSenderType {
+  CUSTOMER
+  AGENT
+  AI
+  SYSTEM
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  DOCUMENT
+  AUDIO
+  VIDEO
+  STICKER
+  LOCATION
+  TEMPLATE
+  INTERACTIVE
+  NOTE
+  SYSTEM
+  UNSUPPORTED
+}
+
+enum MessageStatus {
+  RECEIVED
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum TemplateStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  PAUSED
+  DISABLED
+}
+
+enum WebhookEventStatus {
+  RECEIVED
+  PROCESSED
+  IGNORED
+  FAILED
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum DealStatus {
+  OPEN
+  WON
+  LOST
+}
+
+enum StageType {
+  OPEN
+  WON
+  LOST
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum ProductStatus {
+  ACTIVE
+  DRAFT
+  ARCHIVED
+}
+
+enum CategoryStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum StockStatus {
+  IN_STOCK
+  LOW_STOCK
+  OUT_OF_STOCK
+}
+
+enum InventoryMovementType {
+  INITIAL
+  ADJUSTMENT
+  PURCHASE
+  SALE
+  RESERVATION
+  RELEASE
+  RETURN
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  PACKED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum OrderSource {
+  MANUAL
+  AI
+  WHATSAPP
+  AUTOMATION
+  API
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  VOID
+}
+
+enum DeliveryStatus {
+  PENDING
+  SCHEDULED
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+  RETURNED
+}
+
+enum KnowledgeSourceType {
+  TEXT
+  TXT
+  MARKDOWN
+  PDF
+  DOCX
+  WEBSITE
+}
+
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum AIToolStatus {
+  SUCCESS
+  ERROR
+  DENIED
+  DRY_RUN
+}
+
+enum AIUsagePurpose {
+  CHAT
+  EMBEDDING
+  SUMMARY
+  TEST
+}
+
+enum WorkflowStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+}
+
+enum WorkflowNodeType {
+  TRIGGER
+  CONDITION
+  ACTION
+}
+
+enum WorkflowRunStatus {
+  QUEUED
+  RUNNING
+  WAITING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum WorkflowStepStatus {
+  SUCCEEDED
+  FAILED
+  SKIPPED
+}
+
+enum NotificationType {
+  NEW_LEAD
+  NEW_ORDER
+  PAYMENT_RECEIVED
+  LOW_INVENTORY
+  NEW_MESSAGE
+  ASSIGNMENT
+  WORKFLOW_FAILURE
+  AI_ESCALATION
+  SYSTEM
+}
+
+// ---------------------------------------------------------------------------
+// Platform
+// ---------------------------------------------------------------------------
+
+model SystemSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model Tenant {
+  id                    String       @id @default(uuid()) @db.Uuid
+  name                  String
+  slug                  String       @unique
+  businessName          String?
+  industry              String?
+  country               String?
+  currency              String       @default("USD")
+  timezone              String       @default("UTC")
+  locale                String       @default("en-US")
+  logoUrl               String?
+  website               String?
+  phone                 String?
+  email                 String?
+  address               String?
+  status                TenantStatus @default(ACTIVE)
+  onboardingStep        Int          @default(0)
+  onboardingCompletedAt DateTime?
+  /// Commerce settings: taxRatePercent, defaultShippingFee, deliveryZones, inventoryMode, etc.
+  settings              Json         @default("{}")
+  /// Workspace-wide instructions applied to every AI agent.
+  aiInstructions        String?
+  /// Encrypted per-workspace AI provider settings (overrides platform defaults).
+  aiConfigEnc           String?
+  isDemo                Boolean      @default(false)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  members            UserRole[]
+  roles              Role[]
+  invitations        VerificationToken[]
+  apiKeys            ApiKey[]
+  auditLogs          AuditLog[]
+  subscription       Subscription?
+  usageCounters      UsageCounter[]
+  counters           TenantCounter[]
+  whatsappAccounts   WhatsAppAccount[]
+  whatsappContacts   WhatsAppContact[]
+  conversations      Conversation[]
+  messages           Message[]
+  messageTemplates   MessageTemplate[]
+  webhookEvents      WebhookEvent[]
+  customers          Customer[]
+  leads              Lead[]
+  pipelines          Pipeline[]
+  pipelineStages     PipelineStage[]
+  deals              Deal[]
+  tasks              Task[]
+  activities         Activity[]
+  categories         Category[]
+  products           Product[]
+  inventories        Inventory[]
+  inventoryMovements InventoryMovement[]
+  orders             Order[]
+  orderItems         OrderItem[]
+  orderStatusHistory OrderStatusHistory[]
+  payments           Payment[]
+  invoices           Invoice[]
+  invoiceItems       InvoiceItem[]
+  deliveries         Delivery[]
+  aiAgents           AIAgent[]
+  knowledgeBases     AIKnowledgeBase[]
+  documents          AIDocument[]
+  documentChunks     AIDocumentChunk[]
+  embeddings         AIEmbedding[]
+  toolExecutions     AIToolExecution[]
+  aiUsage            AIUsageLog[]
+  workflows          Workflow[]
+  workflowNodes      WorkflowNode[]
+  workflowEdges      WorkflowEdge[]
+  workflowRuns       WorkflowRun[]
+  workflowRunSteps   WorkflowRunStep[]
+  notifications      Notification[]
+  files              StoredFile[]
+}
+
+model User {
+  id               String     @id @default(uuid()) @db.Uuid
+  email            String     @unique
+  passwordHash     String
+  name             String
+  avatarUrl        String?
+  phone            String?
+  isSuperAdmin     Boolean    @default(false)
+  status           UserStatus @default(ACTIVE)
+  emailVerifiedAt  DateTime?
+  twoFactorEnabled Boolean    @default(false)
+  twoFactorSecret  String?
+  failedLoginCount Int        @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  lastTenantId     String?    @db.Uuid
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  memberships           UserRole[]          @relation("MembershipUser")
+  invitedMemberships    UserRole[]          @relation("MembershipInviter")
+  sessions              Session[]
+  tokens                VerificationToken[]
+  assignedConversations Conversation[]      @relation("ConversationAssignee")
+  sentMessages          Message[]           @relation("MessageSender")
+  assignedLeads         Lead[]              @relation("LeadAssignee")
+  assignedDeals         Deal[]              @relation("DealAssignee")
+  assignedTasks         Task[]              @relation("TaskAssignee")
+  createdTasks          Task[]              @relation("TaskCreator")
+  notifications         Notification[]
+  apiKeys               ApiKey[]
+}
+
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  key         String
+  name        String
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  permissions RolePermission[]
+  members     UserRole[]
+  invitations VerificationToken[]
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+}
+
+model Permission {
+  id          String @id @default(uuid()) @db.Uuid
+  key         String @unique
+  group       String
+  description String
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId       String @db.Uuid
+  permissionId String @db.Uuid
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+/// Workspace membership: a user belongs to a tenant with exactly one role.
+model UserRole {
+  id                String           @id @default(uuid()) @db.Uuid
+  tenantId          String           @db.Uuid
+  userId            String           @db.Uuid
+  roleId            String           @db.Uuid
+  status            MembershipStatus @default(ACTIVE)
+  invitedById       String?          @db.Uuid
+  /// Per-member notification preferences { [NotificationType]: { inApp, email } }
+  notificationPrefs Json             @default("{}")
+  joinedAt          DateTime         @default(now())
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User   @relation("MembershipUser", fields: [userId], references: [id], onDelete: Cascade)
+  role      Role   @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  invitedBy User?  @relation("MembershipInviter", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, userId])
+  @@index([userId])
+}
+
+model Session {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @db.Uuid
+  familyId         String    @db.Uuid
+  refreshTokenHash String    @unique
+  userAgent        String?
+  ip               String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  revokedReason    String?
+  lastUsedAt       DateTime  @default(now())
+  createdAt        DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+model VerificationToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  type      TokenType
+  tokenHash String    @unique
+  email     String
+  userId    String?   @db.Uuid
+  tenantId  String?   @db.Uuid
+  roleId    String?   @db.Uuid
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role   Role?   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@index([email, type])
+  @@index([tenantId])
+}
+
+model ApiKey {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @db.Uuid
+  name        String
+  prefix      String
+  keyHash     String    @unique
+  permissions String[]
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy User?  @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+}
+
+model AuditLog {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String?   @db.Uuid
+  actorId    String?   @db.Uuid
+  actorType  ActorType @default(USER)
+  actorName  String?
+  action     String
+  entityType String?
+  entityId   String?
+  ip         String?
+  userAgent  String?
+  metadata   Json?
+  createdAt  DateTime  @default(now())
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, action])
+  @@index([actorId])
+}
+
+model Subscription {
+  id                     String             @id @default(uuid()) @db.Uuid
+  tenantId               String             @unique @db.Uuid
+  plan                   SubscriptionPlan   @default(FREE)
+  status                 SubscriptionStatus @default(ACTIVE)
+  provider               String?
+  providerCustomerId     String?
+  providerSubscriptionId String?
+  startDate              DateTime           @default(now())
+  renewalDate            DateTime?
+  cancelAt               DateTime?
+  /// Optional per-tenant overrides of plan limits
+  limitsOverride         Json?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model UsageCounter {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  metric   String
+  /// YYYY-MM for monthly metrics
+  period   String
+  value    Int    @default(0)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, metric, period])
+}
+
+/// Per-tenant sequences (order numbers, invoice numbers)
+model TenantCounter {
+  tenantId String @db.Uuid
+  key      String
+  value    Int    @default(0)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, key])
+}
+
+model StoredFile {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @db.Uuid
+  key          String   @unique
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  purpose      String
+  uploadedById String?  @db.Uuid
+  createdAt    DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, purpose])
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp & conversations
+// ---------------------------------------------------------------------------
+
+model WhatsAppAccount {
+  id                 String                @id @default(uuid()) @db.Uuid
+  tenantId           String                @db.Uuid
+  name               String
+  phoneNumberId      String                @unique
+  wabaId             String
+  displayPhoneNumber String?
+  verifiedName       String?
+  accessTokenEnc     String
+  appSecretEnc       String?
+  verifyToken        String
+  status             WhatsAppAccountStatus @default(PENDING)
+  qualityRating      String?
+  lastError          String?
+  lastVerifiedAt     DateTime?
+  isDefault          Boolean               @default(false)
+  defaultAgentId     String?               @db.Uuid
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  tenant        Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  defaultAgent  AIAgent?          @relation(fields: [defaultAgentId], references: [id], onDelete: SetNull)
+  contacts      WhatsAppContact[]
+  conversations Conversation[]
+  templates     MessageTemplate[]
+
+  @@index([tenantId])
+  @@index([verifyToken])
+}
+
+model WhatsAppContact {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @db.Uuid
+  accountId     String    @db.Uuid
+  waId          String
+  profileName   String?
+  customerId    String?   @db.Uuid
+  lastMessageAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  account       WhatsAppAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  customer      Customer?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  conversations Conversation[]
+
+  @@unique([accountId, waId])
+  @@index([tenantId, waId])
+}
+
+model Conversation {
+  id                 String              @id @default(uuid()) @db.Uuid
+  tenantId           String              @db.Uuid
+  channel            ChannelType         @default(WHATSAPP)
+  whatsappAccountId  String?             @db.Uuid
+  contactId          String?             @db.Uuid
+  customerId         String              @db.Uuid
+  status             ConversationStatus  @default(OPEN)
+  handler            ConversationHandler @default(AI)
+  aiAgentId          String?             @db.Uuid
+  assignedUserId     String?             @db.Uuid
+  assignedTeam       String?
+  subject            String?
+  tags               String[]
+  priority           Priority            @default(MEDIUM)
+  unreadCount        Int                 @default(0)
+  lastMessageAt      DateTime            @default(now())
+  lastMessagePreview String?
+  lastInboundAt      DateTime?
+  firstResponseAt    DateTime?
+  resolvedAt         DateTime?
+  closedAt           DateTime?
+  handoffReason      String?
+  handoffAt          DateTime?
+  summary            String?
+  summaryUpdatedAt   DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  whatsappAccount WhatsAppAccount?  @relation(fields: [whatsappAccountId], references: [id], onDelete: SetNull)
+  contact         WhatsAppContact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  customer        Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  aiAgent         AIAgent?          @relation(fields: [aiAgentId], references: [id], onDelete: SetNull)
+  assignedUser    User?             @relation("ConversationAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  messages        Message[]
+  orders          Order[]
+  tasks           Task[]
+  toolExecutions  AIToolExecution[]
+
+  @@index([tenantId, status, lastMessageAt])
+  @@index([tenantId, assignedUserId])
+  @@index([tenantId, handler])
+  @@index([customerId])
+}
+
+model Message {
+  id             String            @id @default(uuid()) @db.Uuid
+  tenantId       String            @db.Uuid
+  conversationId String            @db.Uuid
+  direction      MessageDirection
+  senderType     MessageSenderType
+  senderUserId   String?           @db.Uuid
+  aiAgentId      String?           @db.Uuid
+  type           MessageType       @default(TEXT)
+  body           String?
+  mediaUrl       String?
+  mediaId        String?
+  mediaMimeType  String?
+  mediaFileName  String?
+  templateName   String?
+  externalId     String?
+  status         MessageStatus     @default(PENDING)
+  errorCode      String?
+  errorMessage   String?
+  sentAt         DateTime?
+  deliveredAt    DateTime?
+  readAt         DateTime?
+  failedAt       DateTime?
+  metadata       Json?
+  createdAt      DateTime          @default(now())
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderUser   User?        @relation("MessageSender", fields: [senderUserId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, externalId])
+  @@index([conversationId, createdAt])
+  @@index([tenantId, createdAt])
+}
+
+model MessageTemplate {
+  id             String         @id @default(uuid()) @db.Uuid
+  tenantId       String         @db.Uuid
+  accountId      String         @db.Uuid
+  name           String
+  language       String
+  category       String
+  status         TemplateStatus @default(DRAFT)
+  components     Json
+  externalId     String?
+  rejectedReason String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  tenant  Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  account WhatsAppAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, name, language])
+  @@index([tenantId])
+}
+
+model WebhookEvent {
+  id             String             @id @default(uuid()) @db.Uuid
+  tenantId       String?            @db.Uuid
+  provider       String
+  eventType      String
+  payload        Json
+  signatureValid Boolean
+  status         WebhookEventStatus @default(RECEIVED)
+  error          String?
+  processedAt    DateTime?
+  createdAt      DateTime           @default(now())
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([provider, status])
+}
+
+// ---------------------------------------------------------------------------
+// CRM
+// ---------------------------------------------------------------------------
+
+model Customer {
+  id                String    @id @default(uuid()) @db.Uuid
+  tenantId          String    @db.Uuid
+  name              String
+  email             String?
+  phone             String?
+  whatsappNumber    String?
+  company           String?
+  avatarUrl         String?
+  tags              String[]
+  notes             String?
+  addressLine       String?
+  city              String?
+  country           String?
+  postalCode        String?
+  source            String?
+  totalSpent        Decimal   @default(0) @db.Decimal(14, 2)
+  ordersCount       Int       @default(0)
+  lastInteractionAt DateTime?
+  isDemo            Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  whatsappContacts WhatsAppContact[]
+  conversations    Conversation[]
+  leads            Lead[]
+  deals            Deal[]
+  orders           Order[]
+  invoices         Invoice[]
+  tasks            Task[]
+
+  @@index([tenantId, name])
+  @@index([tenantId, phone])
+  @@index([tenantId, email])
+  @@index([tenantId, whatsappNumber])
+  @@index([tenantId, lastInteractionAt])
+}
+
+model Lead {
+  id             String     @id @default(uuid()) @db.Uuid
+  tenantId       String     @db.Uuid
+  customerId     String?    @db.Uuid
+  name           String
+  email          String?
+  phone          String?
+  company        String?
+  source         String?
+  status         LeadStatus @default(NEW)
+  score          Int        @default(0)
+  value          Decimal?   @db.Decimal(14, 2)
+  assignedUserId String?    @db.Uuid
+  notes          String?
+  tags           String[]
+  lastActivityAt DateTime   @default(now())
+  convertedAt    DateTime?
+  isDemo         Boolean    @default(false)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer     Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  assignedUser User?     @relation("LeadAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  deals        Deal[]
+  tasks        Task[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, assignedUserId])
+}
+
+model Pipeline {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @db.Uuid
+  name      String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  stages PipelineStage[]
+  deals  Deal[]
+
+  @@index([tenantId])
+}
+
+model PipelineStage {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @db.Uuid
+  pipelineId  String    @db.Uuid
+  name        String
+  position    Int
+  probability Int       @default(0)
+  color       String?
+  type        StageType @default(OPEN)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  deals    Deal[]
+
+  @@index([pipelineId, position])
+}
+
+model Deal {
+  id                String     @id @default(uuid()) @db.Uuid
+  tenantId          String     @db.Uuid
+  pipelineId        String     @db.Uuid
+  stageId           String     @db.Uuid
+  customerId        String?    @db.Uuid
+  leadId            String?    @db.Uuid
+  name              String
+  amount            Decimal    @default(0) @db.Decimal(14, 2)
+  probability       Int        @default(0)
+  expectedCloseDate DateTime?
+  assignedUserId    String?    @db.Uuid
+  priority          Priority   @default(MEDIUM)
+  status            DealStatus @default(OPEN)
+  position          Float      @default(0)
+  notes             String?
+  lastActivityAt    DateTime   @default(now())
+  closedAt          DateTime?
+  isDemo            Boolean    @default(false)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pipeline     Pipeline      @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  stage        PipelineStage @relation(fields: [stageId], references: [id], onDelete: Restrict)
+  customer     Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  lead         Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  assignedUser User?         @relation("DealAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  tasks        Task[]
+
+  @@index([tenantId, pipelineId, stageId, position])
+  @@index([tenantId, status])
+}
+
+model Task {
+  id             String     @id @default(uuid()) @db.Uuid
+  tenantId       String     @db.Uuid
+  title          String
+  description    String?
+  status         TaskStatus @default(TODO)
+  priority       Priority   @default(MEDIUM)
+  dueDate        DateTime?
+  assignedUserId String?    @db.Uuid
+  createdById    String?    @db.Uuid
+  customerId     String?    @db.Uuid
+  leadId         String?    @db.Uuid
+  dealId         String?    @db.Uuid
+  conversationId String?    @db.Uuid
+  orderId        String?    @db.Uuid
+  completedAt    DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignedUser User?         @relation("TaskAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  createdBy    User?         @relation("TaskCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  customer     Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  lead         Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  deal         Deal?         @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  order        Order?        @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status, dueDate])
+  @@index([tenantId, assignedUserId])
+}
+
+/// Timeline entries for customers, leads, deals and orders
+model Activity {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  entityType  String
+  entityId    String   @db.Uuid
+  type        String
+  description String
+  actorId     String?  @db.Uuid
+  actorName   String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, entityType, entityId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Commerce
+// ---------------------------------------------------------------------------
+
+model Category {
+  id          String         @id @default(uuid()) @db.Uuid
+  tenantId    String         @db.Uuid
+  name        String
+  slug        String
+  description String?
+  imageUrl    String?
+  status      CategoryStatus @default(ACTIVE)
+  position    Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  @@unique([tenantId, slug])
+}
+
+model Product {
+  id             String        @id @default(uuid()) @db.Uuid
+  tenantId       String        @db.Uuid
+  categoryId     String?       @db.Uuid
+  name           String
+  sku            String
+  description    String?
+  price          Decimal       @db.Decimal(12, 2)
+  salePrice      Decimal?      @db.Decimal(12, 2)
+  cost           Decimal?      @db.Decimal(12, 2)
+  images         String[]
+  status         ProductStatus @default(ACTIVE)
+  tags           String[]
+  /// Extra product knowledge for the AI agent (FAQs, usage, warranty...)
+  aiNotes        String?
+  attributes     Json?
+  trackInventory Boolean       @default(true)
+  isDemo         Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  tenant     Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category   Category?           @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  inventory  Inventory?
+  movements  InventoryMovement[]
+  orderItems OrderItem[]
+
+  @@unique([tenantId, sku])
+  @@index([tenantId, status])
+  @@index([tenantId, name])
+  @@index([tenantId, categoryId])
+}
+
+model Inventory {
+  id                String      @id @default(uuid()) @db.Uuid
+  tenantId          String      @db.Uuid
+  productId         String      @unique @db.Uuid
+  onHand            Int         @default(0)
+  reserved          Int         @default(0)
+  lowStockThreshold Int         @default(5)
+  status            StockStatus @default(OUT_OF_STOCK)
+  updatedAt         DateTime    @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+}
+
+model InventoryMovement {
+  id            String                @id @default(uuid()) @db.Uuid
+  tenantId      String                @db.Uuid
+  productId     String                @db.Uuid
+  type          InventoryMovementType
+  quantity      Int
+  onHandAfter   Int
+  reservedAfter Int
+  reason        String?
+  reference     String?
+  actorId       String?               @db.Uuid
+  actorName     String?
+  createdAt     DateTime              @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([productId, createdAt])
+}
+
+model Order {
+  id                 String        @id @default(uuid()) @db.Uuid
+  tenantId           String        @db.Uuid
+  number             String
+  customerId         String        @db.Uuid
+  conversationId     String?       @db.Uuid
+  status             OrderStatus   @default(PENDING)
+  paymentStatus      PaymentStatus @default(PENDING)
+  source             OrderSource   @default(MANUAL)
+  currency           String        @default("USD")
+  subtotal           Decimal       @db.Decimal(14, 2)
+  discountTotal      Decimal       @default(0) @db.Decimal(14, 2)
+  shippingTotal      Decimal       @default(0) @db.Decimal(14, 2)
+  taxTotal           Decimal       @default(0) @db.Decimal(14, 2)
+  total              Decimal       @db.Decimal(14, 2)
+  amountPaid         Decimal       @default(0) @db.Decimal(14, 2)
+  notes              String?
+  shippingName       String?
+  shippingPhone      String?
+  shippingAddress    String?
+  shippingCity       String?
+  shippingCountry    String?
+  inventoryReserved  Boolean       @default(false)
+  inventoryCommitted Boolean       @default(false)
+  placedAt           DateTime      @default(now())
+  confirmedAt        DateTime?
+  cancelledAt        DateTime?
+  cancelReason       String?
+  createdById        String?       @db.Uuid
+  isDemo             Boolean       @default(false)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  tenant        Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer      Customer             @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  conversation  Conversation?        @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  items         OrderItem[]
+  payments      Payment[]
+  invoice       Invoice?
+  deliveries    Delivery[]
+  statusHistory OrderStatusHistory[]
+  tasks         Task[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, createdAt])
+  @@index([customerId])
+}
+
+model OrderItem {
+  id        String  @id @default(uuid()) @db.Uuid
+  tenantId  String  @db.Uuid
+  orderId   String  @db.Uuid
+  productId String? @db.Uuid
+  name      String
+  sku       String?
+  unitPrice Decimal @db.Decimal(12, 2)
+  quantity  Int
+  discount  Decimal @default(0) @db.Decimal(12, 2)
+  total     Decimal @db.Decimal(14, 2)
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([tenantId, productId])
+}
+
+model OrderStatusHistory {
+  id         String       @id @default(uuid()) @db.Uuid
+  tenantId   String       @db.Uuid
+  orderId    String       @db.Uuid
+  fromStatus OrderStatus?
+  toStatus   OrderStatus
+  note       String?
+  actorId    String?      @db.Uuid
+  actorName  String?
+  createdAt  DateTime     @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+}
+
+model Payment {
+  id             String        @id @default(uuid()) @db.Uuid
+  tenantId       String        @db.Uuid
+  orderId        String?       @db.Uuid
+  invoiceId      String?       @db.Uuid
+  amount         Decimal       @db.Decimal(14, 2)
+  refundedAmount Decimal       @default(0) @db.Decimal(14, 2)
+  currency       String        @default("USD")
+  status         PaymentStatus @default(PENDING)
+  method         String
+  provider       String        @default("manual")
+  providerRef    String?
+  notes          String?
+  paidAt         DateTime?
+  createdById    String?       @db.Uuid
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order   Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  invoice Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status, createdAt])
+  @@index([orderId])
+}
+
+model Invoice {
+  id            String        @id @default(uuid()) @db.Uuid
+  tenantId      String        @db.Uuid
+  number        String
+  orderId       String?       @unique @db.Uuid
+  customerId    String        @db.Uuid
+  status        InvoiceStatus @default(ISSUED)
+  paymentStatus PaymentStatus @default(PENDING)
+  currency      String        @default("USD")
+  issueDate     DateTime      @default(now())
+  dueDate       DateTime?
+  subtotal      Decimal       @db.Decimal(14, 2)
+  discountTotal Decimal       @default(0) @db.Decimal(14, 2)
+  taxTotal      Decimal       @default(0) @db.Decimal(14, 2)
+  shippingTotal Decimal       @default(0) @db.Decimal(14, 2)
+  total         Decimal       @db.Decimal(14, 2)
+  amountPaid    Decimal       @default(0) @db.Decimal(14, 2)
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order    Order?        @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  customer Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  items    InvoiceItem[]
+  payments Payment[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, issueDate])
+}
+
+model InvoiceItem {
+  id          String  @id @default(uuid()) @db.Uuid
+  tenantId    String  @db.Uuid
+  invoiceId   String  @db.Uuid
+  description String
+  sku         String?
+  quantity    Int
+  unitPrice   Decimal @db.Decimal(12, 2)
+  discount    Decimal @default(0) @db.Decimal(12, 2)
+  total       Decimal @db.Decimal(14, 2)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model Delivery {
+  id             String         @id @default(uuid()) @db.Uuid
+  tenantId       String         @db.Uuid
+  orderId        String         @db.Uuid
+  status         DeliveryStatus @default(PENDING)
+  carrier        String?
+  trackingNumber String?
+  trackingUrl    String?
+  recipientName  String?
+  recipientPhone String?
+  address        String?
+  city           String?
+  country        String?
+  fee            Decimal        @default(0) @db.Decimal(12, 2)
+  scheduledAt    DateTime?
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([orderId])
+}
+
+// ---------------------------------------------------------------------------
+// AI
+// ---------------------------------------------------------------------------
+
+model AIAgent {
+  id                 String   @id @default(uuid()) @db.Uuid
+  tenantId           String   @db.Uuid
+  name               String
+  description        String?
+  avatarUrl          String?
+  systemInstructions String
+  personality        String?
+  language           String   @default("auto")
+  tone               String   @default("friendly")
+  businessInfo       String?
+  salesObjectives    String?
+  escalationRules    String?
+  /// { enabled, timezone, days: { mon: {from,to} ... } }
+  workingHours       Json?
+  fallbackBehavior   String   @default("handoff")
+  fallbackMessage    String?
+  model              String?
+  temperature        Float    @default(0.3)
+  enabledTools       String[]
+  useKnowledgeBase   Boolean  @default(true)
+  isActive           Boolean  @default(true)
+  isDefault          Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  tenant           Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  knowledgeBases   AIAgentKnowledgeBase[]
+  conversations    Conversation[]
+  whatsappAccounts WhatsAppAccount[]
+  toolExecutions   AIToolExecution[]
+  usage            AIUsageLog[]
+
+  @@index([tenantId])
+}
+
+model AIKnowledgeBase {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant    Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  agents    AIAgentKnowledgeBase[]
+  documents AIDocument[]
+  chunks    AIDocumentChunk[]
+
+  @@index([tenantId])
+}
+
+model AIAgentKnowledgeBase {
+  agentId         String @db.Uuid
+  knowledgeBaseId String @db.Uuid
+
+  agent         AIAgent         @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  knowledgeBase AIKnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+
+  @@id([agentId, knowledgeBaseId])
+}
+
+model AIDocument {
+  id              String              @id @default(uuid()) @db.Uuid
+  tenantId        String              @db.Uuid
+  knowledgeBaseId String              @db.Uuid
+  title           String
+  sourceType      KnowledgeSourceType
+  sourceUrl       String?
+  storageKey      String?
+  rawText         String?
+  mimeType        String?
+  sizeBytes       Int?
+  status          DocumentStatus      @default(PENDING)
+  error           String?
+  chunkCount      Int                 @default(0)
+  embeddedCount   Int                 @default(0)
+  tokenCount      Int                 @default(0)
+  contentHash     String?
+  processedAt     DateTime?
+  createdById     String?             @db.Uuid
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  tenant        Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  knowledgeBase AIKnowledgeBase   @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+  chunks        AIDocumentChunk[]
+
+  @@index([tenantId, knowledgeBaseId])
+}
+
+model AIDocumentChunk {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @db.Uuid
+  documentId      String   @db.Uuid
+  knowledgeBaseId String   @db.Uuid
+  index           Int
+  content         String
+  tokenCount      Int
+  createdAt       DateTime @default(now())
+
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  document      AIDocument      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  knowledgeBase AIKnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+  embedding     AIEmbedding?
+
+  @@index([tenantId, knowledgeBaseId])
+  @@index([documentId, index])
+}
+
+/// Vector stored as float8[]; retrieval computes cosine similarity.
+/// Swap for pgvector when the extension is available (see DOCUMENTATION.md).
+model AIEmbedding {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @db.Uuid
+  chunkId    String   @unique @db.Uuid
+  model      String
+  dimensions Int
+  vector     Float[]
+  createdAt  DateTime @default(now())
+
+  tenant Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  chunk  AIDocumentChunk @relation(fields: [chunkId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model AIToolExecution {
+  id             String       @id @default(uuid()) @db.Uuid
+  tenantId       String       @db.Uuid
+  agentId        String?      @db.Uuid
+  conversationId String?      @db.Uuid
+  toolName       String
+  input          Json
+  output         Json?
+  status         AIToolStatus
+  error          String?
+  durationMs     Int
+  createdAt      DateTime     @default(now())
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  agent        AIAgent?      @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, toolName])
+}
+
+model AIUsageLog {
+  id               String         @id @default(uuid()) @db.Uuid
+  tenantId         String         @db.Uuid
+  agentId          String?        @db.Uuid
+  conversationId   String?        @db.Uuid
+  purpose          AIUsagePurpose
+  model            String
+  promptTokens     Int            @default(0)
+  completionTokens Int            @default(0)
+  totalTokens      Int            @default(0)
+  estimatedCost    Decimal        @default(0) @db.Decimal(12, 6)
+  createdAt        DateTime       @default(now())
+
+  tenant Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  agent  AIAgent? @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Automation
+// ---------------------------------------------------------------------------
+
+model Workflow {
+  id           String         @id @default(uuid()) @db.Uuid
+  tenantId     String         @db.Uuid
+  name         String
+  description  String?
+  status       WorkflowStatus @default(DRAFT)
+  triggerType  String
+  version      Int            @default(1)
+  runCount     Int            @default(0)
+  failureCount Int            @default(0)
+  lastRunAt    DateTime?
+  createdById  String?        @db.Uuid
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  tenant Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nodes  WorkflowNode[]
+  edges  WorkflowEdge[]
+  runs   WorkflowRun[]
+
+  @@index([tenantId, status, triggerType])
+}
+
+model WorkflowNode {
+  id         String           @id @default(uuid()) @db.Uuid
+  tenantId   String           @db.Uuid
+  workflowId String           @db.Uuid
+  key        String
+  type       WorkflowNodeType
+  subtype    String
+  label      String?
+  config     Json             @default("{}")
+  positionX  Float            @default(0)
+  positionY  Float            @default(0)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, key])
+}
+
+model WorkflowEdge {
+  id           String  @id @default(uuid()) @db.Uuid
+  tenantId     String  @db.Uuid
+  workflowId   String  @db.Uuid
+  sourceKey    String
+  targetKey    String
+  /// "yes" / "no" for condition branches, null otherwise
+  sourceHandle String?
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+}
+
+model WorkflowRun {
+  id             String            @id @default(uuid()) @db.Uuid
+  tenantId       String            @db.Uuid
+  workflowId     String            @db.Uuid
+  status         WorkflowRunStatus @default(QUEUED)
+  triggerType    String
+  triggerPayload Json
+  context        Json?
+  currentNodeKey String?
+  attempts       Int               @default(0)
+  error          String?
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workflow Workflow          @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  steps    WorkflowRunStep[]
+
+  @@index([tenantId, createdAt])
+  @@index([workflowId, createdAt])
+  @@index([tenantId, status])
+}
+
+model WorkflowRunStep {
+  id         String             @id @default(uuid()) @db.Uuid
+  tenantId   String             @db.Uuid
+  runId      String             @db.Uuid
+  nodeKey    String
+  nodeType   WorkflowNodeType
+  subtype    String
+  status     WorkflowStepStatus
+  output     Json?
+  error      String?
+  startedAt  DateTime
+  finishedAt DateTime
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  run    WorkflowRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId, startedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  tenantId  String           @db.Uuid
+  userId    String           @db.Uuid
+  type      NotificationType
+  title     String
+  body      String?
+  link      String?
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId, readAt])
+  @@index([tenantId, userId, createdAt])
+}
