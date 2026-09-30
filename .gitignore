@@ -6,11 +6,13 @@ next-env.d.ts
 .env
 .env.*
 !.env.example
-storage/
-uploads/
-logs/
+# Runtime data only (anchored so source folders such as src/modules/storage stay tracked)
+/storage/
+apps/*/storage/
+/uploads/
+/logs/
 *.log
-backups/
+/backups/
 installed.lock
 coverage/
 playwright-report/
