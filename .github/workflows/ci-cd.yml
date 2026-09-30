@@ -119,6 +119,8 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Deploy ${{ github.sha }}
+        env:
+          PM2_HOME: /home/sellora/.pm2
         run: |
           cd /opt/sellora-ai/app
           ./deploy.sh main
