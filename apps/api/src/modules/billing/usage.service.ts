@@ -14,6 +14,21 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { LimitExceededError } from '../../common/errors';
 
+/** Days a manually paid workspace keeps its plan after the paid month ends. */
+const GRACE_DAYS = 3;
+
+/** True when a manually paid subscription ran out (plus grace) without a renewal. */
+export function isLapsed(sub: { plan: SubscriptionPlan; provider: string | null; renewalDate: Date | null } | null | undefined, now = new Date()): boolean {
+  if (!sub || sub.plan === SubscriptionPlan.FREE || sub.provider !== 'manual' || !sub.renewalDate) return false;
+  return sub.renewalDate.getTime() + GRACE_DAYS * 86_400_000 < now.getTime();
+}
+
+/** The plan whose limits apply right now. */
+export function effectivePlan(sub: { plan: SubscriptionPlan; provider: string | null; renewalDate: Date | null } | null | undefined): SubscriptionPlan {
+  if (!sub) return SubscriptionPlan.FREE;
+  return isLapsed(sub) ? SubscriptionPlan.FREE : sub.plan;
+}
+
 /**
  * Tracks usage against plan limits. Monthly metrics are counters; the rest are
  * computed from live data so they can never drift.
@@ -24,7 +39,7 @@ export class UsageService {
 
   async limitsFor(tenantId: string): Promise<{ plan: SubscriptionPlan; limits: PlanLimits }> {
     const sub = await this.prisma.subscription.findUnique({ where: { tenantId } });
-    const plan = sub?.plan ?? SubscriptionPlan.FREE;
+    const plan = effectivePlan(sub);
     const base = PLANS[plan].limits;
     const override = (sub?.limitsOverride ?? {}) as Partial<PlanLimits>;
     return { plan, limits: { ...base, ...override } };

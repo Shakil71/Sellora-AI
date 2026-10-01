@@ -3,7 +3,8 @@ import { SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
 import { PLAN_KEYS, PlanKey, PLANS } from '@sellora/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditActor, AuditService } from '../audit/audit.service';
-import { UsageService } from './usage.service';
+import { isLapsed, UsageService } from './usage.service';
+import { PlanPaymentsService } from './plan-payments.service';
 import { activePaymentProvider, PAYMENT_PROVIDERS } from './payment-providers';
 import { AppException, ensureFound } from '../../common/errors';
 import type { Actor } from '../../common/auth-context';
@@ -17,6 +18,7 @@ export class BillingService {
     private readonly prisma: PrismaService,
     private readonly usage: UsageService,
     private readonly audit: AuditService,
+    private readonly planPayments: PlanPaymentsService,
   ) {}
 
   plans() {
@@ -30,8 +32,11 @@ export class BillingService {
       update: {},
     });
     const provider = activePaymentProvider();
+    const manual = await this.planPayments.publicInfo(tenantId);
+    const lapsed = isLapsed(subscription);
     return {
-      subscription,
+      subscription: { ...subscription, lapsed },
+      manualPayment: manual,
       plan: PLANS[subscription.plan],
       usage: await this.usage.summary(tenantId),
       plans: this.plans(),
@@ -76,7 +81,8 @@ export class BillingService {
     const sub = await this.prisma.subscription.upsert({
       where: { tenantId },
       create: { tenantId, plan: plan as SubscriptionPlan, status },
-      update: { plan: plan as SubscriptionPlan, status, startDate: new Date() },
+      // An admin-assigned plan never lapses: clear any manual-payment expiry.
+      update: { plan: plan as SubscriptionPlan, status, startDate: new Date(), provider: null, renewalDate: null },
     });
     await this.audit.log({ ...actor, tenantId }, { action: 'billing.plan_changed', entityType: 'Subscription', entityId: sub.id, metadata: { plan, status } });
     return sub;

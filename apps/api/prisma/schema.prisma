@@ -59,6 +59,12 @@ enum SubscriptionStatus {
   EXPIRED
 }
 
+enum PlanPaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum ChannelType {
   WHATSAPP
   TEST
@@ -372,6 +378,8 @@ model Tenant {
   counters           TenantCounter[]
   whatsappAccounts   WhatsAppAccount[]
   channelConnections ChannelConnection[]
+  paymentMethods     PaymentMethod[]
+  planPayments       PlanPayment[]
   channelContacts    ChannelContact[]
   webhookEndpoints   WebhookEndpoint[]
   webhookDeliveries  WebhookDelivery[]
@@ -604,6 +612,33 @@ model Subscription {
   updatedAt              DateTime           @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+/// A workspace's own payment for a subscription plan made outside the app
+/// (bKash, Nagad, bank transfer...), waiting for the platform admin to confirm.
+model PlanPayment {
+  id            String            @id @default(uuid()) @db.Uuid
+  tenantId      String            @db.Uuid
+  plan          SubscriptionPlan
+  amount        Decimal           @db.Decimal(14, 2)
+  currency      String
+  /// Method the customer paid with, e.g. "bKash"
+  method        String
+  /// Transaction id / receipt number, upper-cased
+  reference     String
+  note          String?
+  status        PlanPaymentStatus @default(PENDING)
+  reviewNote    String?
+  reviewedById  String?           @db.Uuid
+  reviewedAt    DateTime?
+  submittedById String?           @db.Uuid
+  createdAt     DateTime          @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([tenantId, createdAt])
+  @@index([reference])
 }
 
 model UsageCounter {
@@ -1300,29 +1335,67 @@ model OrderStatusHistory {
 }
 
 model Payment {
-  id             String        @id @default(uuid()) @db.Uuid
-  tenantId       String        @db.Uuid
-  orderId        String?       @db.Uuid
-  invoiceId      String?       @db.Uuid
-  amount         Decimal       @db.Decimal(14, 2)
-  refundedAmount Decimal       @default(0) @db.Decimal(14, 2)
-  currency       String        @default("USD")
-  status         PaymentStatus @default(PENDING)
-  method         String
-  provider       String        @default("manual")
-  providerRef    String?
-  notes          String?
-  paidAt         DateTime?
-  createdById    String?       @db.Uuid
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id              String        @id @default(uuid()) @db.Uuid
+  tenantId        String        @db.Uuid
+  orderId         String?       @db.Uuid
+  invoiceId       String?       @db.Uuid
+  amount          Decimal       @db.Decimal(14, 2)
+  refundedAmount  Decimal       @default(0) @db.Decimal(14, 2)
+  currency        String        @default("USD")
+  status          PaymentStatus @default(PENDING)
+  method          String
+  provider        String        @default("manual")
+  providerRef     String?
+  /// Hosted payment page the customer pays on (online gateways)
+  checkoutUrl     String?
+  paymentMethodId String?       @db.Uuid
+  notes           String?
+  paidAt          DateTime?
+  createdById     String?       @db.Uuid
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
-  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  order   Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
-  invoice Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order         Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  invoice       Invoice?       @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, status, createdAt])
   @@index([orderId])
+}
+
+/// A way a workspace accepts payment: an online gateway (Stripe, PayPal, Razorpay, ...),
+/// a manual method (bank transfer, bKash, UPI, cash on delivery, ...) or a custom payment link.
+/// Secrets are encrypted with ENCRYPTION_KEY.
+model PaymentMethod {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @db.Uuid
+  /// Gateway adapter key: manual, custom_link, stripe, paypal, razorpay, paystack, sslcommerz
+  provider       String
+  /// Stored on Payment.method; unique per workspace
+  methodKey      String
+  name           String
+  /// Shown to the customer (manual methods): account numbers, how to pay
+  instructions   String?
+  /// ISO country codes this method is offered in; empty = everywhere
+  countries      String[]
+  /// ISO currency codes this method accepts; empty = any the gateway supports
+  currencies     String[]
+  /// Encrypted JSON of the gateway fields (keys, mode, link template, ...)
+  credentialsEnc String?
+  /// Random token in the public webhook URL
+  webhookToken   String   @unique
+  isActive       Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  lastError      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@unique([tenantId, methodKey])
+  @@index([tenantId, isActive])
 }
 
 model Invoice {

@@ -33,6 +33,8 @@ import { ChannelConnectionsService } from './modules/integrations/channel-connec
 import { MetaWebhookService } from './modules/integrations/meta-webhook.service';
 import { WebChatService } from './modules/integrations/webchat.service';
 import { WebhooksService } from './modules/integrations/webhooks.service';
+import { PlanPaymentsService } from './modules/billing/plan-payments.service';
+import { PaymentMethodsService } from './modules/payment-gateways/payment-methods.service';
 
 /** Business services registered in DomainModule (shared by API and worker). */
 export const DOMAIN_PROVIDERS: Provider[] = [
@@ -71,4 +73,6 @@ export const DOMAIN_PROVIDERS: Provider[] = [
   MetaWebhookService,
   WebChatService,
   WebhooksService,
+  PaymentMethodsService,
+  PlanPaymentsService,
 ];

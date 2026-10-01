@@ -26,6 +26,7 @@ import { OnboardingController } from './modules/onboarding/onboarding.controller
 import { AdminController } from './modules/admin/admin.controller';
 import { InstallController } from './modules/install/install.controller';
 import { IntegrationsController, MetaWebhookController, WebChatPublicController } from './modules/integrations/integrations.controller';
+import { PaymentGatewaysPublicController, PaymentMethodsController } from './modules/payment-gateways/payment-gateways.controller';
 
 export const API_CONTROLLERS: Type[] = [
   HealthController,
@@ -62,4 +63,6 @@ export const API_CONTROLLERS: Type[] = [
   IntegrationsController,
   WebChatPublicController,
   MetaWebhookController,
+  PaymentMethodsController,
+  PaymentGatewaysPublicController,
 ];

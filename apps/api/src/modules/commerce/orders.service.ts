@@ -126,6 +126,15 @@ export class OrdersService {
     this.messenger = messenger;
   }
 
+  /** Messages the customer on their channel. False when there is no conversation to send it in. */
+  async sendToCustomer(tenantId: string, customerId: string, text: string, conversationId?: string | null): Promise<boolean> {
+    if (!this.messenger) return false;
+    return this.messenger.sendToCustomer(tenantId, customerId, text, conversationId).catch((err: Error) => {
+      this.logger.warn(`Could not message customer ${customerId}: ${err.message}`);
+      return false;
+    });
+  }
+
   async nextNumber(tx: Tx, tenantId: string, key: 'order' | 'invoice', prefix: string) {
     const counter = await tx.tenantCounter.upsert({
       where: { tenantId_key: { tenantId, key } },

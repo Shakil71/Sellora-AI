@@ -11,6 +11,7 @@ import {
   MessageCircle,
   MessageSquareMore,
   Send,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -28,7 +29,7 @@ interface Tile {
   tint: string;
   count: (c: IntegrationsOverview['counts']) => number;
   unit: string;
-  kind: 'Channel' | 'Developer';
+  kind: 'Channel' | 'Commerce' | 'Developer';
 }
 
 const TILES: Tile[] = [
@@ -73,6 +74,17 @@ const TILES: Tile[] = [
     count: (c) => c.instagram,
     unit: 'account',
     kind: 'Channel',
+  },
+  {
+    title: 'Payments',
+    description:
+      'Accept payments worldwide or locally: Stripe, PayPal, Razorpay, Paystack, SSLCOMMERZ, bKash, UPI, bank transfer and more.',
+    href: '/integrations/payments',
+    icon: Wallet,
+    tint: 'bg-success/12 text-success',
+    count: (c) => c.paymentMethods,
+    unit: 'method',
+    kind: 'Commerce',
   },
   {
     title: 'Webhooks',
@@ -133,10 +145,10 @@ export default function IntegrationsPage() {
         </CardContent>
       </Card>
 
-      {(['Channel', 'Developer'] as const).map((kind) => (
+      {(['Channel', 'Commerce', 'Developer'] as const).map((kind) => (
         <section key={kind} className="mb-8">
           <h2 className="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-            {kind === 'Channel' ? 'Customer channels' : 'Connect your systems'}
+            {kind === 'Channel' ? 'Customer channels' : kind === 'Commerce' ? 'Get paid' : 'Connect your systems'}
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {TILES.filter((t) => t.kind === kind).map((t) => {

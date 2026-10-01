@@ -46,6 +46,7 @@ import {
   MessageSquareMore,
   Camera,
   Send,
+  Wallet,
   Code2,
 } from 'lucide-react';
 
@@ -111,6 +112,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { title: 'Website Chat', href: '/integrations/website-chat', icon: Globe, permission: 'integrations.view' },
       { title: 'Messenger', href: '/integrations/messenger', icon: MessageSquareMore, permission: 'integrations.view' },
       { title: 'Instagram', href: '/integrations/instagram', icon: Camera, permission: 'integrations.view' },
+      { title: 'Payments', href: '/integrations/payments', icon: Wallet, permission: 'integrations.view' },
       { title: 'Webhooks', href: '/integrations/webhooks', icon: Send, permission: 'integrations.view' },
       { title: 'Developer API', href: '/integrations/api', icon: Code2, permission: 'integrations.view' },
     ],

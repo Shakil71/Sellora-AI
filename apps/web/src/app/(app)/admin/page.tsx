@@ -2,15 +2,16 @@
 
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Building2, Inbox, RotateCcw, Server, Trash2 } from 'lucide-react';
+import { Building2, Check, Inbox, RotateCcw, Server, Trash2, Wallet, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { PLAN_KEYS } from '@sellora/shared';
 import { api, type Paginated } from '@/lib/api';
-import { date, number, relative } from '@/lib/format';
+import { date, money, number, relative } from '@/lib/format';
 import { useSession } from '@/components/session';
 import { EmptyState, PageHeader, StatCard } from '@/components/shared/page';
+import { Field } from '@/components/shared/form';
 import { DataTable, Pagination, SearchInput, Toolbar } from '@/components/shared/data-table';
-import { Badge, Card, CardContent, CardHeader, CardTitle, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/primitives';
+import { Badge, Card, CardContent, CardHeader, CardTitle, Input, Tabs, TabsContent, TabsList, TabsTrigger, Textarea } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/overlays';
 import { useListState } from '@/hooks/use-list-state';
@@ -39,6 +40,155 @@ interface DeadJob {
   error: string;
   attemptsMade: number;
   failedAt: string;
+}
+
+interface PlanPaymentRow {
+  id: string;
+  plan: string;
+  amount: string;
+  currency: string;
+  method: string;
+  reference: string;
+  note: string | null;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reviewNote: string | null;
+  createdAt: string;
+  tenant: { id: string; name: string; email: string | null };
+}
+interface BillingSettings {
+  currency: string;
+  prices: Record<string, number>;
+  instructions: string;
+}
+const PAID_PLANS = ['STARTER', 'PRO', 'BUSINESS'];
+
+function PlanPayments() {
+  const qc = useQueryClient();
+  const [status, setStatus] = React.useState<'PENDING' | 'ALL'>('PENDING');
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-plan-payments', status],
+    queryFn: () => api.get<Paginated<PlanPaymentRow> & { pending: number }>('/admin/plan-payments', { pageSize: 50, ...(status === 'PENDING' ? { status: 'PENDING' } : {}) }),
+  });
+  const review = useMutation({
+    mutationFn: (v: { id: string; action: 'approve' | 'reject'; note?: string }) => api.post(`/admin/plan-payments/${v.id}/${v.action}`, { note: v.note }),
+    onSuccess: (_r, v) => {
+      toast.success(v.action === 'approve' ? 'Payment approved. The plan is active.' : 'Payment rejected');
+      qc.invalidateQueries({ queryKey: ['admin-plan-payments'] });
+      qc.invalidateQueries({ queryKey: ['admin-tenants'] });
+    },
+  });
+  const settings = useQuery({ queryKey: ['admin-billing-settings'], queryFn: () => api.get<BillingSettings>('/admin/billing-settings') });
+  const [form, setForm] = React.useState<BillingSettings | null>(null);
+  React.useEffect(() => {
+    if (settings.data) setForm(settings.data);
+  }, [settings.data]);
+  const save = useMutation({
+    mutationFn: () => api.put('/admin/billing-settings', form),
+    onSuccess: () => {
+      toast.success('Billing settings saved');
+      qc.invalidateQueries({ queryKey: ['admin-billing-settings'] });
+    },
+  });
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>How customers pay you</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-4">
+          <p className="text-sm text-muted-foreground">
+            Add your bKash, Nagad or bank details and monthly prices. Customers see this on their Billing page, pay you, and submit the transaction ID for you to confirm below.
+          </p>
+          {form && (
+            <>
+              <Field label="Payment instructions" htmlFor="bs-ins" hint="Leave empty to turn manual plan payments off.">
+                <Textarea id="bs-ins" rows={4} maxLength={2000} placeholder={'bKash Personal: 01XXXXXXXXX\nBank: ___, A/C ___'} value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} />
+              </Field>
+              <div className="grid gap-4 sm:grid-cols-4">
+                <Field label="Currency" htmlFor="bs-cur">
+                  <Input id="bs-cur" value={form.currency} maxLength={3} onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })} />
+                </Field>
+                {PAID_PLANS.map((p) => (
+                  <Field key={p} label={`${p} / month`} htmlFor={`bs-${p}`}>
+                    <Input
+                      id={`bs-${p}`}
+                      type="number"
+                      min={0}
+                      value={form.prices[p] ?? ''}
+                      onChange={(e) => {
+                        const prices = { ...form.prices };
+                        if (e.target.value) prices[p] = Number(e.target.value);
+                        else delete prices[p];
+                        setForm({ ...form, prices });
+                      }}
+                    />
+                  </Field>
+                ))}
+              </div>
+              <Button onClick={() => save.mutate()} loading={save.isPending}>
+                Save billing settings
+              </Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            Plan payments
+            <span className="flex gap-2">
+              <Button size="sm" variant={status === 'PENDING' ? 'default' : 'outline'} onClick={() => setStatus('PENDING')}>
+                Pending ({data?.pending ?? 0})
+              </Button>
+              <Button size="sm" variant={status === 'ALL' ? 'default' : 'outline'} onClick={() => setStatus('ALL')}>
+                All
+              </Button>
+            </span>
+          </CardTitle>
+        </CardHeader>
+        {isLoading ? null : !data?.items.length ? (
+          <EmptyState icon={Wallet} title="No payments to review" description="When a customer submits a bKash, Nagad or bank payment it appears here." />
+        ) : (
+          <ul className="divide-y">
+            {data.items.map((r) => (
+              <li key={r.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">
+                    {r.tenant.name} · {r.plan}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {r.method} · <span className="font-mono">{r.reference}</span> · {relative(r.createdAt)}
+                    {r.note ? ` · “${r.note}”` : ''}
+                  </p>
+                </div>
+                <span className="font-medium tabular">{money(r.amount, r.currency)}</span>
+                {r.status === 'PENDING' ? (
+                  <>
+                    <Button size="sm" onClick={() => review.mutate({ id: r.id, action: 'approve' })} disabled={review.isPending}>
+                      <Check /> Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={review.isPending}
+                      onClick={() => {
+                        const note = window.prompt('Reason shown to the customer (optional)') ?? undefined;
+                        review.mutate({ id: r.id, action: 'reject', note: note || undefined });
+                      }}
+                    >
+                      <X /> Reject
+                    </Button>
+                  </>
+                ) : (
+                  <Badge variant={r.status === 'APPROVED' ? 'success' : 'destructive'}>{r.status.toLowerCase()}</Badge>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </div>
+  );
 }
 
 export default function AdminPage() {
@@ -71,6 +221,7 @@ export default function AdminPage() {
       <Tabs defaultValue="tenants">
         <TabsList>
           <TabsTrigger value="tenants">Workspaces</TabsTrigger>
+          <TabsTrigger value="payments">Plan payments</TabsTrigger>
           <TabsTrigger value="queues">Queues</TabsTrigger>
           <TabsTrigger value="dead">Dead letter ({dead.data?.meta.total ?? 0})</TabsTrigger>
         </TabsList>
@@ -125,6 +276,9 @@ export default function AdminPage() {
             ]}
             footer={tenants.data && <Pagination page={tenants.data.meta.page} totalPages={tenants.data.meta.totalPages} total={tenants.data.meta.total} onPage={list.setPage} label="workspaces" />}
           />
+        </TabsContent>
+        <TabsContent value="payments">
+          <PlanPayments />
         </TabsContent>
         <TabsContent value="queues">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">

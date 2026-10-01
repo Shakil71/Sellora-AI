@@ -5,6 +5,7 @@ import { Auth, CurrentActor, Public, RequirePermissions, SkipCsrf, TenantId } fr
 import type { Actor, AppRequest, AuthContext } from '../../common/auth-context';
 import { zBody } from '../../common/zod.pipe';
 import { BillingService } from './billing.service';
+import { PlanPaymentsService, submitPlanPaymentSchema } from './plan-payments.service';
 import { UsageService } from './usage.service';
 
 const changePlanSchema = z.object({ plan: z.enum(PLAN_KEYS) });
@@ -14,6 +15,7 @@ export class BillingController {
   constructor(
     private readonly billing: BillingService,
     private readonly usage: UsageService,
+    private readonly planPayments: PlanPaymentsService,
   ) {}
 
   @Get('plans')
@@ -42,6 +44,13 @@ export class BillingController {
     @Body(zBody(changePlanSchema)) body: z.infer<typeof changePlanSchema>,
   ) {
     return this.billing.changePlan(actor, body.plan, auth.email ?? '');
+  }
+
+  /** Tells the platform admin you paid by bKash, Nagad, bank transfer etc. They confirm it to activate the plan. */
+  @Post('payments')
+  @RequirePermissions('billing.manage')
+  submitPayment(@CurrentActor() actor: Actor, @Body(zBody(submitPlanPaymentSchema)) body: z.infer<typeof submitPlanPaymentSchema>) {
+    return this.planPayments.submit(actor, body);
   }
 
   /** Provider webhooks (signature verified by the provider implementation). */

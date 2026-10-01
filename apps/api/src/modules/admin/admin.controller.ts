@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Injectable, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Injectable, Param, ParseUUIDPipe, Patch, Post, Put, Query } from '@nestjs/common';
 import { Prisma, TenantStatus } from '@prisma/client';
 import { z } from 'zod';
 import { PLAN_KEYS } from '@sellora/shared';
@@ -9,6 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { QueueService } from '../../queue/queue.module';
 import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
+import { billingSettingsSchema, PlanPaymentsService, planPaymentListSchema, reviewPlanPaymentSchema } from '../billing/plan-payments.service';
 import { AccessService } from '../auth/access.service';
 import { DEFAULT_JOB_OPTIONS, DeadLetterPayload } from '../../queue/queue.constants';
 import { ensureFound, ValidationError } from '../../common/errors';
@@ -30,6 +31,7 @@ export class AdminService {
     private readonly audit: AuditService,
     private readonly billing: BillingService,
     private readonly access: AccessService,
+    readonly planPayments: PlanPaymentsService,
   ) {}
 
   async overview() {
@@ -137,6 +139,31 @@ export class AdminController {
   @Patch('tenants/:id')
   updateTenant(@Auth() auth: AuthContext, @Param('id', ParseUUIDPipe) id: string, @Body(zBody(tenantUpdate)) body: z.infer<typeof tenantUpdate>) {
     return this.admin.updateTenant(auth, id, body);
+  }
+
+  @Get('plan-payments')
+  planPaymentList(@Query(new ZodPipe(planPaymentListSchema)) q: z.infer<typeof planPaymentListSchema>) {
+    return this.admin.planPayments.list(q);
+  }
+
+  @Post('plan-payments/:id/approve')
+  approvePlanPayment(@Auth() auth: AuthContext, @Param('id', ParseUUIDPipe) id: string, @Body(zBody(reviewPlanPaymentSchema)) body: z.infer<typeof reviewPlanPaymentSchema>) {
+    return this.admin.planPayments.approve(auth, id, body);
+  }
+
+  @Post('plan-payments/:id/reject')
+  rejectPlanPayment(@Auth() auth: AuthContext, @Param('id', ParseUUIDPipe) id: string, @Body(zBody(reviewPlanPaymentSchema)) body: z.infer<typeof reviewPlanPaymentSchema>) {
+    return this.admin.planPayments.reject(auth, id, body);
+  }
+
+  @Get('billing-settings')
+  billingSettings() {
+    return this.admin.planPayments.settings();
+  }
+
+  @Put('billing-settings')
+  saveBillingSettings(@Auth() auth: AuthContext, @Body(zBody(billingSettingsSchema)) body: z.infer<typeof billingSettingsSchema>) {
+    return this.admin.planPayments.saveSettings(auth, body);
   }
 
   @Get('queues')

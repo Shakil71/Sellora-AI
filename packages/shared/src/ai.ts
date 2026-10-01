@@ -13,6 +13,8 @@ export const AI_TOOLS = [
   { name: 'createLead', label: 'Create lead', description: 'Record the customer as a sales lead.', writes: true },
   { name: 'updateCustomer', label: 'Update customer', description: 'Save the customer name, email or address.', writes: true },
   { name: 'createOrder', label: 'Create order', description: 'Place an order after the customer confirms.', writes: true },
+  { name: 'getPaymentOptions', label: 'Payment options', description: 'List the ways the customer can pay for an order.', writes: false },
+  { name: 'requestPayment', label: 'Send payment link', description: 'Create a payment link or payment instructions for an unpaid order.', writes: true },
   { name: 'createTask', label: 'Create task', description: 'Create a follow-up task for the team.', writes: true },
   { name: 'transferToHuman', label: 'Transfer to human', description: 'Hand the conversation over to a human agent.', writes: true },
 ] as const;

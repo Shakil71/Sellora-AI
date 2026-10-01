@@ -76,7 +76,7 @@ export class OnboardingService {
       fallbackBehavior: 'handoff',
       enabledTools: [
         'searchProducts', 'getProductDetails', 'checkInventory', 'calculateOrderTotal', 'checkDeliveryAvailability', 'getOrderStatus',
-        'getCustomerHistory', 'createLead', 'updateCustomer', 'createOrder', 'createTask', 'transferToHuman',
+        'getCustomerHistory', 'createLead', 'updateCustomer', 'createOrder', 'getPaymentOptions', 'requestPayment', 'createTask', 'transferToHuman',
       ],
     } as AgentInput);
   }

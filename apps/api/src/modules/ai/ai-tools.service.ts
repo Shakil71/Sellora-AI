@@ -6,6 +6,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ProductsService, effectivePrice } from '../commerce/products.service';
 import { InventoryService } from '../commerce/inventory.service';
 import { OrdersService } from '../commerce/orders.service';
+import { PaymentsService } from '../commerce/payments.service';
 import { LeadsService } from '../crm/leads.service';
 import { CustomersService } from '../crm/customers.service';
 import { TasksService } from '../crm/tasks.service';
@@ -79,6 +80,7 @@ export class AIToolsService {
     private readonly tasks: TasksService,
     private readonly conversations: ConversationsService,
     private readonly tenants: TenantsService,
+    private readonly payments: PaymentsService,
   ) {
     const specs: ToolSpec<ZodTypeAny>[] = [
       this.searchProducts(),
@@ -91,6 +93,8 @@ export class AIToolsService {
       this.createLead(),
       this.updateCustomer(),
       this.createOrder(),
+      this.getPaymentOptions(),
+      this.requestPayment(),
       this.createTask(),
       this.transferToHuman(),
     ] as ToolSpec<ZodTypeAny>[];
@@ -498,6 +502,68 @@ export class AIToolsService {
           ok: true,
           data: { orderNumber: order.number, status: order.status, total: formatMoney(Number(order.total), order.currency), items: order.items.map((i) => `${i.quantity} × ${i.name}`) },
         };
+      },
+    };
+  }
+
+  /** The customer's unpaid order, matched by number or the most recent one. */
+  private async unpaidOrder(ctx: ToolContext, orderNumber?: string) {
+    const customerId = this.requireCustomer(ctx);
+    const orders = await this.prisma.order.findMany({
+      where: { tenantId: ctx.tenantId, customerId, status: { notIn: ['CANCELLED', 'REFUNDED'] }, ...(orderNumber ? { number: { equals: orderNumber, mode: 'insensitive' } } : {}) },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    });
+    return orders.find((o) => Number(o.total) - Number(o.amountPaid) > 0.005);
+  }
+
+  private getPaymentOptions(): ToolSpec<ZodTypeAny> {
+    const schema = z.object({ orderNumber: z.string().trim().max(40).optional() });
+    return {
+      name: 'getPaymentOptions',
+      writes: false,
+      description: "List how the current customer can pay for an unpaid order (online payment link or manual methods) and the amount due. Only the customer's own orders are visible.",
+      parameters: obj({ orderNumber: str('Order number; defaults to the latest unpaid order') }),
+      schema,
+      run: async (input: z.infer<typeof schema>, ctx) => {
+        const order = await this.unpaidOrder(ctx, input.orderNumber);
+        if (!order) return { ok: true, data: { note: 'No unpaid order found for this customer.' } };
+        const methods = (await this.payments.methods(ctx.tenantId, { orderId: order.id })).filter((m) => m.id && m.offered);
+        return {
+          ok: true,
+          data: {
+            orderNumber: order.number,
+            amountDue: formatMoney(Number(order.total) - Number(order.amountPaid), order.currency),
+            methods: methods.map((m) => ({ method: m.label, type: m.online ? 'online payment link' : 'manual (customer follows instructions)' })),
+            note: methods.length ? undefined : 'No payment methods are set up for this order. Offer to connect the customer with the team.',
+          },
+        };
+      },
+    };
+  }
+
+  private requestPayment(): ToolSpec<ZodTypeAny> {
+    const schema = z.object({ method: z.string().trim().min(1).max(60), orderNumber: z.string().trim().max(40).optional() });
+    return {
+      name: 'requestPayment',
+      writes: true,
+      description:
+        'After the customer chose a payment method from getPaymentOptions, create the payment link or payment instructions for the unpaid order. Share the returned text with the customer exactly as given.',
+      parameters: obj({ method: str('Method name exactly as listed by getPaymentOptions'), orderNumber: str('Order number; defaults to the latest unpaid order') }, ['method']),
+      schema,
+      run: async (input: z.infer<typeof schema>, ctx) => {
+        const order = await this.unpaidOrder(ctx, input.orderNumber);
+        if (!order) return { ok: false, error: 'No unpaid order found for this customer.' };
+        const wanted = input.method.toLowerCase();
+        const methods = await this.payments.methods(ctx.tenantId, { orderId: order.id });
+        const method = methods.find((m) => m.id && m.offered && (m.label.toLowerCase() === wanted || m.key === wanted));
+        if (!method?.id) return { ok: false, error: 'That payment method is not available for this order. Call getPaymentOptions and offer one of the listed methods.' };
+        try {
+          const result = await this.payments.requestPayment(aiActor(ctx.tenantId, ctx.agentName), { orderId: order.id, methodId: method.id, sendToCustomer: false });
+          return { ok: true, data: { orderNumber: order.number, method: method.label, paymentLink: result.url ?? undefined, messageToShare: result.message } };
+        } catch (err) {
+          return { ok: false, error: err instanceof Error ? err.message : 'Could not create the payment request. Offer to connect the customer with the team.' };
+        }
       },
     };
   }

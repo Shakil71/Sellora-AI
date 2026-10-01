@@ -8,7 +8,7 @@ import { zBody, ZodPipe } from '../../common/zod.pipe';
 import { categorySchema, productListSchema, productSchema, ProductsService, productUpdateSchema } from './products.service';
 import { adjustSchema, inventoryListSchema, InventoryService } from './inventory.service';
 import { createOrderSchema, orderListSchema, OrdersService, orderStatusSchema, updateOrderSchema } from './orders.service';
-import { paymentListSchema, PaymentsService, paymentStatusSchema, recordPaymentSchema, refundSchema } from './payments.service';
+import { methodsQuerySchema, paymentListSchema, PaymentsService, paymentStatusSchema, recordPaymentSchema, refundSchema, requestPaymentSchema } from './payments.service';
 import { invoiceListSchema, InvoicesService } from './invoices.service';
 import { deliveryListSchema, DeliveriesService, deliverySchema, deliveryUpdateSchema } from './deliveries.service';
 import { AppException } from '../../common/errors';
@@ -185,8 +185,15 @@ export class PaymentsController {
 
   @Get('methods')
   @RequirePermissions('orders.view')
-  methods() {
-    return this.payments.methods();
+  methods(@TenantId() tenantId: string, @Query(new ZodPipe(methodsQuerySchema)) q: z.infer<typeof methodsQuerySchema>) {
+    return this.payments.methods(tenantId, q);
+  }
+
+  /** Creates a payment link (online gateways) or payment instructions (manual methods) for an order. */
+  @Post('request')
+  @RequirePermissions('orders.update')
+  request(@CurrentActor() actor: Actor, @Body(zBody(requestPaymentSchema)) body: z.infer<typeof requestPaymentSchema>) {
+    return this.payments.requestPayment(actor, body);
   }
 
   @Post()

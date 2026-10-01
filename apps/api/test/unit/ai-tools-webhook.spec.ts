@@ -114,3 +114,43 @@ describe('WhatsApp webhook signature verification', () => {
     expect(created).toHaveLength(0);
   });
 });
+
+describe('AI payment tools', () => {
+  const order = { id: 'o1', number: 'ORD-1', currency: 'USD', total: 50, amountPaid: 0 };
+  const methods = [
+    { id: 'm1', key: 'stripe', label: 'Stripe', online: true, offered: true },
+    { id: 'm2', key: 'bkash', label: 'bKash', online: false, offered: false },
+  ];
+  const payments = { methods: jest.fn(async () => methods), requestPayment: jest.fn(async () => ({ url: 'https://pay.example/x', message: 'Pay here: https://pay.example/x', sent: false })) };
+  const prisma = { aIToolExecution: { create: jest.fn(async (a: { data: unknown }) => a.data) }, order: { findMany: jest.fn(async () => [order]) } };
+  const svc = new AIToolsService(prisma as never, {} as never, {} as never, {} as never, {} as never, {} as never, {} as never, {} as never, {} as never, payments as never);
+  const enabled = ctx({ enabledTools: ['getPaymentOptions', 'requestPayment'] });
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it('lists only the methods offered for the order', async () => {
+    const out = await svc.execute('getPaymentOptions', '{}', enabled);
+    expect(out.ok).toBe(true);
+    expect(JSON.stringify(out.data)).toContain('Stripe');
+    expect(JSON.stringify(out.data)).not.toContain('bKash');
+    expect(JSON.stringify(out.data)).toContain('$50.00');
+  });
+
+  it('creates a payment link for a chosen method', async () => {
+    const out = await svc.execute('requestPayment', JSON.stringify({ method: 'stripe' }), enabled);
+    expect(out.ok).toBe(true);
+    expect(payments.requestPayment).toHaveBeenCalledWith(expect.anything(), { orderId: 'o1', methodId: 'm1', sendToCustomer: false });
+  });
+
+  it('refuses methods that are not offered and never calls the gateway', async () => {
+    const out = await svc.execute('requestPayment', JSON.stringify({ method: 'bKash' }), enabled);
+    expect(out.ok).toBe(false);
+    expect(payments.requestPayment).not.toHaveBeenCalled();
+  });
+
+  it('is a dry run in the playground', async () => {
+    const out = await svc.execute('requestPayment', JSON.stringify({ method: 'stripe' }), { ...enabled, dryRun: true });
+    expect(out.ok).toBe(true);
+    expect(payments.requestPayment).not.toHaveBeenCalled();
+  });
+});

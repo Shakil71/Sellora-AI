@@ -34,6 +34,7 @@ export interface IntegrationsOverview {
     instagram: number;
     webhooks: number;
     apiKeys: number;
+    paymentMethods: number;
   };
   apiBaseUrl: string;
   metaWebhookUrl: string;

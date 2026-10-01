@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bot, CreditCard, FileText, MessagesSquare, Printer, Receipt, RotateCcw, Truck, ChevronRight } from 'lucide-react';
+import { Bot, Check, Copy, CreditCard, FileText, MessagesSquare, Printer, Receipt, RotateCcw, Truck, ChevronRight, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { dateTime, money, relative, titleCase } from '@/lib/format';
@@ -20,7 +20,9 @@ import { Field, FormGrid, MoneyInput } from '@/components/shared/form';
 import { ProductThumb } from '@/features/products/product-thumb';
 import { ActivityTimeline } from '@/features/activity-timeline';
 
-interface Payment { id: string; amount: string; refundedAmount: string; currency: string; status: string; method: string; providerRef: string | null; paidAt: string | null; createdAt: string; notes: string | null }
+interface Payment { id: string; amount: string; refundedAmount: string; currency: string; status: string; method: string; providerRef: string | null; paidAt: string | null; createdAt: string; notes: string | null; checkoutUrl: string | null }
+interface PayMethod { id: string | null; key: string; label: string; online: boolean; offered: boolean; notOfferedReason?: string }
+interface PaymentRequestResult { url: string | null; message: string; sent: boolean }
 interface DeliveryRow { id: string; status: string; carrier: string | null; trackingNumber: string | null; trackingUrl: string | null; scheduledAt: string | null; shippedAt: string | null; deliveredAt: string | null }
 type Detail = Order & {
   payments: Payment[];
@@ -69,13 +71,18 @@ export default function OrderDetailPage() {
   const qc = useQueryClient();
   const { can, currency: wsCurrency } = useSession();
   const { data: o, isLoading, error, refetch } = useQuery({ queryKey: ['order', id], queryFn: () => api.get<Detail>(`/orders/${id}`) });
-  const methods = useQuery({ queryKey: ['payment-methods'], queryFn: () => api.get<Array<{ key: string; label: string }>>('/payments/methods') });
+  const methods = useQuery({ queryKey: ['payment-methods', 'order', id], queryFn: () => api.get<PayMethod[]>('/payments/methods', { orderId: id }) });
+  const manualMethods = methods.data?.filter((m) => !m.online);
+  const requestable = methods.data?.filter((m) => m.id) ?? [];
   const [statusDialog, setStatusDialog] = React.useState<string | null>(null);
   const [statusNote, setStatusNote] = React.useState('');
   const [notify, setNotify] = React.useState(true);
   const [restock, setRestock] = React.useState(true);
   const [payOpen, setPayOpen] = React.useState(false);
   const [payment, setPayment] = React.useState<{ amount: number | null; method: string; providerRef: string; notes: string }>({ amount: null, method: 'cash_on_delivery', providerRef: '', notes: '' });
+  const [requestOpen, setRequestOpen] = React.useState(false);
+  const [request, setRequest] = React.useState<{ methodId: string; amount: number | null; send: boolean }>({ methodId: '', amount: null, send: true });
+  const [requested, setRequested] = React.useState<PaymentRequestResult | null>(null);
   const [refund, setRefund] = React.useState<{ payment: Payment; amount: number | null; reason: string } | null>(null);
   const [deliveryOpen, setDeliveryOpen] = React.useState(false);
   const [delivery, setDelivery] = React.useState({ carrier: '', trackingNumber: '', trackingUrl: '' });
@@ -98,6 +105,21 @@ export default function OrderDetailPage() {
     onSuccess: () => {
       toast.success('Payment recorded');
       setPayOpen(false);
+      invalidate();
+    },
+  });
+  const requestPayment = useMutation({
+    mutationFn: () => api.post<PaymentRequestResult>('/payments/request', { orderId: id, methodId: request.methodId, amount: request.amount ?? undefined, sendToCustomer: request.send && Boolean(o?.conversation) }),
+    onSuccess: (r) => {
+      setRequestOpen(false);
+      setRequested(r);
+      invalidate();
+    },
+  });
+  const setPaymentStatus = useMutation({
+    mutationFn: (v: { id: string; status: 'PAID' | 'FAILED' }) => api.post(`/payments/${v.id}/status`, { status: v.status }),
+    onSuccess: (_d, v) => {
+      toast.success(v.status === 'PAID' ? 'Marked as paid' : 'Marked as failed');
       invalidate();
     },
   });
@@ -229,12 +251,24 @@ export default function OrderDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><CreditCard className="size-4" /> Payments</CardTitle>
-              <CardAction>
-                {can('orders.update') && outstanding > 0 && !closed && (
+              <CardAction className="flex gap-2">
+                {can('orders.update') && outstanding > 0 && !closed && requestable.length > 0 && (
                   <Button
                     size="sm"
                     onClick={() => {
-                      setPayment({ amount: outstanding, method: methods.data?.[0]?.key ?? 'cash_on_delivery', providerRef: '', notes: '' });
+                      setRequest({ methodId: requestable.find((m) => m.offered)?.id ?? '', amount: outstanding, send: true });
+                      setRequestOpen(true);
+                    }}
+                  >
+                    Request payment
+                  </Button>
+                )}
+                {can('orders.update') && outstanding > 0 && !closed && (
+                  <Button
+                    size="sm"
+                    variant={requestable.length > 0 ? 'outline' : 'default'}
+                    onClick={() => {
+                      setPayment({ amount: outstanding, method: manualMethods?.[0]?.key ?? 'cash_on_delivery', providerRef: '', notes: '' });
                       setPayOpen(true);
                     }}
                   >
@@ -260,6 +294,21 @@ export default function OrderDetailPage() {
                       </div>
                       <StatusBadge map={PAYMENT_STATUS} value={p.status} />
                       <span className="w-24 text-right text-sm font-medium tabular">{money(p.amount, currency)}</span>
+                      {p.status === 'PENDING' && p.checkoutUrl && (
+                        <Button variant="ghost" size="icon-sm" aria-label="Copy payment link" onClick={() => navigator.clipboard.writeText(p.checkoutUrl!).then(() => toast.success('Payment link copied'))}>
+                          <Copy />
+                        </Button>
+                      )}
+                      {can('orders.update') && p.status === 'PENDING' && (
+                        <>
+                          <Button variant="ghost" size="icon-sm" aria-label="Mark as paid" title="Mark as paid" onClick={() => setPaymentStatus.mutate({ id: p.id, status: 'PAID' })}>
+                            <Check />
+                          </Button>
+                          <Button variant="ghost" size="icon-sm" aria-label="Mark as failed" title="Mark as failed" onClick={() => setPaymentStatus.mutate({ id: p.id, status: 'FAILED' })}>
+                            <X />
+                          </Button>
+                        </>
+                      )}
                       {canCancel && ['PAID', 'PARTIALLY_REFUNDED'].includes(p.status) && (
                         <Button variant="ghost" size="icon-sm" aria-label="Refund payment" onClick={() => setRefund({ payment: p, amount: Number(p.amount) - Number(p.refundedAmount), reason: '' })}>
                           <RotateCcw />
@@ -444,6 +493,74 @@ export default function OrderDetailPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={requestOpen} onOpenChange={setRequestOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request payment</DialogTitle>
+            <DialogDescription>Balance due: {money(outstanding, currency)}. Online methods create a secure payment link; manual methods give the customer instructions.</DialogDescription>
+          </DialogHeader>
+          <FormGrid>
+            <Field label="Payment method" htmlFor="req-method">
+              <Select value={request.methodId} onValueChange={(v) => setRequest({ ...request, methodId: v })}>
+                <SelectTrigger id="req-method">
+                  <SelectValue placeholder="Choose a method" />
+                </SelectTrigger>
+                <SelectContent>
+                  {requestable.map((m) => (
+                    <SelectItem key={m.id} value={m.id!} disabled={!m.offered}>
+                      {m.label}
+                      {m.online ? ' · online' : ''}
+                      {!m.offered && m.notOfferedReason ? ` (${m.notOfferedReason})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Amount" htmlFor="req-amount">
+              <MoneyInput id="req-amount" currency={currency} value={request.amount} onChange={(v) => setRequest({ ...request, amount: v })} />
+            </Field>
+          </FormGrid>
+          {o.conversation && (
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <Label htmlFor="req-send">Send to the customer in chat</Label>
+                <p className="text-xs text-muted-foreground">Posts the link or instructions in their {titleCase(o.conversation.channel)} conversation.</p>
+              </div>
+              <Switch id="req-send" checked={request.send} onCheckedChange={(v) => setRequest({ ...request, send: v })} />
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRequestOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => requestPayment.mutate()} loading={requestPayment.isPending} disabled={!request.methodId || !request.amount}>
+              Create request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(requested)} onOpenChange={(v) => !v && setRequested(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{requested?.url ? 'Payment link ready' : 'Payment instructions ready'}</DialogTitle>
+            <DialogDescription>
+              {requested?.sent ? 'The customer has been sent this message. ' : ''}
+              {requested?.url ? 'The order is marked paid automatically once the payment is confirmed.' : 'Mark the payment as paid on this order when the money arrives.'}
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea readOnly rows={6} value={requested?.message ?? ''} onFocus={(e) => e.target.select()} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRequested(null)}>
+              Close
+            </Button>
+            <Button onClick={() => requested && navigator.clipboard.writeText(requested.message).then(() => toast.success('Copied'))}>
+              <Copy /> Copy message
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={payOpen} onOpenChange={setPayOpen}>
         <DialogContent>
           <DialogHeader>
@@ -460,7 +577,7 @@ export default function OrderDetailPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {methods.data?.map((m) => (
+                  {manualMethods?.map((m) => (
                     <SelectItem key={m.key} value={m.key}>
                       {m.label}
                     </SelectItem>

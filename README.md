@@ -13,6 +13,7 @@ Sellora AI is a multi-tenant SaaS platform that turns WhatsApp conversations int
 - **Integrations for your own systems**: a REST API with scoped API keys and signed outgoing webhooks (orders, leads, messages, stock) with retries and a delivery log.
 - **CRM**: leads, customers, deals, drag-and-drop pipelines and tasks.
 - **Commerce**: products, categories, inventory with reservations, orders, payments, refunds, invoices (PDF) and deliveries.
+- **Payment methods per business**: owners add their own gateways under Integrations → Payments: Stripe and PayPal (international), Razorpay (India), Paystack (Africa), SSLCOMMERZ (Bangladesh), any provider through a payment-link template, plus manual methods (bKash, Nagad, UPI, M-Pesa, bank transfer, cash on delivery…), each limited to countries and currencies. Customers get a payment link or instructions from the order page or chat, and verified gateway webhooks mark orders paid. A new gateway is one adapter in `apps/api/src/modules/payment-gateways/gateways.ts`.
 - **Knowledge base (RAG)**: PDF, DOCX, TXT, Markdown and web pages, with semantic or keyword retrieval.
 - **Automation**: visual node-based workflows, background execution, retries, run logs.
 - **Security**: tenant isolation, granular RBAC, HTTP-only cookie sessions with refresh rotation, CSRF protection, 2FA, audit logs, encrypted secrets, rate limiting.

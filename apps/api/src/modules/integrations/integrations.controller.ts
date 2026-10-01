@@ -64,7 +64,7 @@ export class IntegrationsController {
   @Get('overview')
   @RequirePermissions('integrations.view')
   async overview(@TenantId() tenantId: string) {
-    const [whatsapp, connections, webhooks, apiKeys] = await Promise.all([
+    const [whatsapp, connections, webhooks, apiKeys, paymentMethods] = await Promise.all([
       this.prisma.whatsAppAccount.count({ where: { tenantId } }),
       this.prisma.channelConnection.groupBy({
         by: ['type'],
@@ -73,6 +73,7 @@ export class IntegrationsController {
       }),
       this.prisma.webhookEndpoint.count({ where: { tenantId } }),
       this.prisma.apiKey.count({ where: { tenantId, revokedAt: null } }),
+      this.prisma.paymentMethod.count({ where: { tenantId, isActive: true } }),
     ]);
     const byType = Object.fromEntries(connections.map((c) => [c.type, c._count._all]));
     return {
@@ -83,6 +84,7 @@ export class IntegrationsController {
         instagram: byType.INSTAGRAM ?? 0,
         webhooks,
         apiKeys,
+        paymentMethods,
       },
       apiBaseUrl: `${env.API_URL}/api/v1`,
       metaWebhookUrl: `${env.API_URL}/api/v1/webhooks/meta`,
