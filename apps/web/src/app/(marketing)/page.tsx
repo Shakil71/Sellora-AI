@@ -2,74 +2,43 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
   ArrowRight,
-  BadgeCheck,
-  BarChart3,
-  Bell,
   Bot,
-  Boxes,
   Check,
   CheckCheck,
-  Database,
-  FileText,
-  Globe,
-  KeyRound,
-  Languages,
-  Lock,
   MessageCircle,
   MessagesSquare,
-  Package,
   PackageCheck,
   Search,
-  Server,
-  ShieldCheck,
   ShoppingCart,
-  Sparkles,
-  Target,
-  UserRoundCheck,
-  Users,
   Workflow,
   Zap,
 } from 'lucide-react';
-import { PLANS, PLAN_KEYS } from '@sellora/shared';
+import { PLANS, PLAN_KEYS, type HomeContent } from '@sellora/shared';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/primitives';
 import { BrowserFrame, PhoneFrame, ThemedShot } from '@/components/marketing/frames';
 import { ProductTour } from '@/components/marketing/product-tour';
 import { AnchorLink, ScrollToAnchor } from '@/components/marketing/anchor-link';
+import { HOME_ICON_MAP } from '@/components/marketing/home-icons';
+import { getHome, type HomePricing } from '@/lib/home-content';
 
-export const metadata: Metadata = {
-  title: 'Sellora AI — Turn WhatsApp Conversations Into Revenue',
-  description:
-    'Sellora AI combines an AI sales agent, a WhatsApp team inbox, CRM, product catalog, orders and automation in one platform you can self-host.',
-  alternates: { canonical: '/' },
-  openGraph: {
-    title: 'Sellora AI — Turn WhatsApp Conversations Into Revenue',
-    description: 'AI sales agent, WhatsApp inbox, CRM, orders and automation in one platform.',
-    images: [
-      {
-        url: '/marketing/dashboard-light.webp',
-        width: 1920,
-        height: 1200,
-        alt: 'Sellora AI dashboard',
-      },
-    ],
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { content } = await getHome();
+  return {
+    title: content.seo.title,
+    description: content.seo.description,
+    alternates: { canonical: '/' },
+    openGraph: {
+      title: content.seo.title,
+      description: content.seo.description,
+      images: [{ url: '/marketing/dashboard-light.webp', width: 1920, height: 1200, alt: `${content.brandName} dashboard` }],
+    },
+  };
+}
 
-/**
- * Social proof is configuration-driven. Leave these empty until you have
- * real, permissioned logos and quotes — the sections stay hidden.
- */
+/** Customer logos: leave empty until you have real, permissioned logos. Quotes are edited under Platform admin → Home page. */
 const TRUSTED_BY: Array<{ name: string; logoUrl: string }> = [];
-const TESTIMONIALS: Array<{ quote: string; name: string; role: string }> = [];
 
-const FOUNDATIONS = [
-  { icon: MessageCircle, label: 'Official WhatsApp Cloud API' },
-  { icon: Sparkles, label: 'Any OpenAI-compatible model' },
-  { icon: Database, label: 'PostgreSQL & Redis' },
-  { icon: Server, label: 'Self-host on your own server' },
-  { icon: ShieldCheck, label: 'Role-based access & audit logs' },
-];
 
 const FLOW = [
   {
@@ -120,61 +89,7 @@ const FLOW = [
   },
 ];
 
-const FEATURES = [
-  {
-    icon: Target,
-    title: 'CRM & pipelines',
-    text: 'Leads captured from chats, customers with full history, and drag-and-drop deal pipelines.',
-  },
-  {
-    icon: Package,
-    title: 'Product catalog',
-    text: 'Products, categories, images, stock levels and product knowledge the AI can use.',
-  },
-  {
-    icon: Boxes,
-    title: 'Inventory',
-    text: 'Reserve on order, deduct on shipment, restock on cancellation, with low-stock alerts.',
-  },
-  {
-    icon: FileText,
-    title: 'Invoices & payments',
-    text: 'Record payments, issue printable invoices, export PDFs and track deliveries.',
-  },
-  {
-    icon: BarChart3,
-    title: 'Analytics',
-    text: 'Sales, CRM, conversation and AI reports calculated from your real data.',
-  },
-  {
-    icon: Bell,
-    title: 'Realtime notifications',
-    text: 'New messages, handoffs, orders and low stock reach the right people instantly.',
-  },
-];
 
-const GUARDRAILS = [
-  {
-    icon: Database,
-    title: 'Facts come from your data',
-    text: 'Prices, stock, delivery fees and totals only come from live tool calls, never from the model’s imagination.',
-  },
-  {
-    icon: UserRoundCheck,
-    title: 'Confirmation before orders',
-    text: 'The agent places an order only after the customer approves an itemised summary, and only if you allow it.',
-  },
-  {
-    icon: Users,
-    title: 'Graceful human handoff',
-    text: 'Complex or sensitive cases go to your team with an AI-written summary of the conversation.',
-  },
-  {
-    icon: Languages,
-    title: 'Your tone, your rules',
-    text: 'Set personality, language, working hours, escalation rules and a knowledge base per agent.',
-  },
-];
 
 const TOOL_TRACE = [
   {
@@ -192,83 +107,8 @@ const TOOL_TRACE = [
   },
 ];
 
-const STEPS = [
-  {
-    icon: MessageCircle,
-    title: 'Connect WhatsApp',
-    text: 'Link your number through the official Meta Cloud API. Your number and account stay yours.',
-  },
-  {
-    icon: Package,
-    title: 'Add products & knowledge',
-    text: 'Import your catalog, delivery zones and policies so the AI answers with facts.',
-  },
-  {
-    icon: Bot,
-    title: 'Let AI sell, your team steps in',
-    text: 'The agent handles routine sales around the clock and hands complex cases to a human.',
-  },
-];
 
-const SECURITY = [
-  {
-    icon: Lock,
-    title: 'Encrypted secrets',
-    text: 'WhatsApp tokens, AI keys and 2FA secrets are encrypted with AES-256-GCM.',
-  },
-  {
-    icon: Users,
-    title: 'Granular roles',
-    text: 'Owner, Admin, Manager, Sales, Support, Agent and Viewer, plus custom roles.',
-  },
-  {
-    icon: KeyRound,
-    title: 'Strong sign-in',
-    text: 'Argon2id passwords, two-factor authentication and rotating sessions.',
-  },
-  {
-    icon: BadgeCheck,
-    title: 'Verified webhooks',
-    text: 'Every WhatsApp and Stripe webhook is signature-checked before processing.',
-  },
-  {
-    icon: Globe,
-    title: 'Workspace isolation',
-    text: 'Every query is scoped to one workspace, so businesses never see each other’s data.',
-  },
-  {
-    icon: FileText,
-    title: 'Audit logs',
-    text: 'Who changed what and when, with secrets automatically scrubbed.',
-  },
-];
 
-const FAQ = [
-  {
-    q: 'Does Sellora AI use the official WhatsApp API?',
-    a: 'Yes. Sellora AI connects through the Meta WhatsApp Cloud API. You keep ownership of your number and your WhatsApp Business Account.',
-  },
-  {
-    q: 'Can the AI make up prices or stock?',
-    a: 'No. Prices, availability, delivery fees and totals only come from live tool calls against your catalog. Orders are only placed after the customer confirms an itemised summary.',
-  },
-  {
-    q: 'What happens when the AI cannot help?',
-    a: 'It transfers the conversation to your team, notifies the right people and writes a short summary so nobody has to scroll back.',
-  },
-  {
-    q: 'Which AI provider do you use?',
-    a: 'Any OpenAI-compatible API. Each workspace can bring its own key; usage and estimated cost are tracked per agent.',
-  },
-  {
-    q: 'Can my team use it on their phones?',
-    a: 'Yes. The whole app, including the inbox, is fully responsive and works in any modern mobile browser.',
-  },
-  {
-    q: 'Can I self-host it?',
-    a: 'Yes. Sellora AI runs on a standard VPS with Node.js, PostgreSQL, Redis and Nginx or Apache. No Docker is required.',
-  },
-];
 
 function SectionHeading({
   eyebrow,
@@ -292,7 +132,8 @@ function SectionHeading({
   );
 }
 
-function Hero() {
+function Hero({ c }: { c: HomeContent }) {
+  const h = c.hero;
   return (
     <section className="relative isolate overflow-hidden">
       <div
@@ -306,41 +147,41 @@ function Hero() {
       <div className="mx-auto max-w-6xl px-4 pt-14 sm:px-6 sm:pt-20 lg:pt-24">
         <div className="mx-auto max-w-3xl text-center">
           <AnchorLink
-            href="/#product"
+            href={h.secondaryCta.href}
             className="group mx-auto inline-flex max-w-full items-center gap-2 rounded-full border bg-card/80 py-1 pr-3 pl-1 text-xs font-medium shadow-xs backdrop-blur transition hover:border-primary/40 sm:text-sm"
           >
-            <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] text-primary-foreground">
-              New
-            </span>
-            <span className="truncate">AI sales agent for WhatsApp commerce</span>
+            {h.badgeLabel && (
+              <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] text-primary-foreground">
+                {h.badgeLabel}
+              </span>
+            )}
+            <span className="truncate">{h.badgeText}</span>
             <ArrowRight
               className="size-3.5 shrink-0 transition group-hover:translate-x-0.5"
               aria-hidden
             />
           </AnchorLink>
           <h1 className="mt-6 text-4xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-6xl lg:text-7xl">
-            Turn WhatsApp conversations into{' '}
+            {h.headlinePrefix}{' '}
             <span className="bg-gradient-to-r from-primary via-[color-mix(in_oklch,var(--primary)_60%,var(--ai))] to-ai bg-clip-text text-transparent">
-              revenue.
+              {h.headlineHighlight}
             </span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl">
-            Sellora AI answers customers, recommends products from your real catalog, takes orders
-            and keeps your CRM up to date, while your team handles the conversations that need a
-            human.
+            {h.subheadline}
           </p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <Button size="lg" asChild className="shadow-lg shadow-primary/25">
-              <Link href="/register">
-                Start selling smarter <ArrowRight />
-              </Link>
+              <AnchorLink href={h.primaryCta.href}>
+                {h.primaryCta.label} <ArrowRight />
+              </AnchorLink>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <AnchorLink href="/#product">See the product</AnchorLink>
+              <AnchorLink href={h.secondaryCta.href}>{h.secondaryCta.label}</AnchorLink>
             </Button>
           </div>
           <ul className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-            {['Free plan available', 'No credit card to start', 'Self-hostable'].map((t) => (
+            {h.checks.map((t) => (
               <li key={t} className="flex items-center gap-1.5">
                 <Check className="size-4 text-primary" aria-hidden /> {t}
               </li>
@@ -410,7 +251,7 @@ function Hero() {
   );
 }
 
-function Foundations() {
+function Foundations({ c }: { c: HomeContent }) {
   return (
     <section aria-label="Built on" className="border-y bg-muted/30">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -423,11 +264,14 @@ function Foundations() {
           </div>
         ) : (
           <ul className="grid grid-cols-1 gap-x-8 gap-y-4 text-sm font-medium text-muted-foreground min-[480px]:grid-cols-2 md:flex md:flex-wrap md:justify-center">
-            {FOUNDATIONS.map((f) => (
-              <li key={f.label} className="flex items-center gap-2.5">
-                <f.icon className="size-4.5 text-primary" aria-hidden /> {f.label}
-              </li>
-            ))}
+            {c.foundations.map((f) => {
+              const Icon = HOME_ICON_MAP[f.icon];
+              return (
+                <li key={f.label} className="flex items-center gap-2.5">
+                  <Icon className="size-4.5 text-primary" aria-hidden /> {f.label}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
@@ -435,14 +279,10 @@ function Foundations() {
   );
 }
 
-function ConversationToOrder() {
+function ConversationToOrder({ c }: { c: HomeContent }) {
   return (
     <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
-      <SectionHeading
-        eyebrow="From chat to checkout"
-        title="A complete sale, without leaving WhatsApp"
-        text="Here is what happens when a customer writes to your number and the AI agent is on duty."
-      />
+      <SectionHeading eyebrow={c.flow.eyebrow} title={c.flow.title} text={c.flow.text} />
       <ol className="relative grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div
           className="absolute top-8 right-[12%] left-[12%] hidden h-px bg-gradient-to-r from-transparent via-border to-transparent lg:block"
@@ -471,15 +311,11 @@ function ConversationToOrder() {
   );
 }
 
-function FeatureBento() {
+function FeatureBento({ c }: { c: HomeContent }) {
   return (
     <section id="features" className="scroll-mt-20 border-y bg-muted/30">
       <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
-        <SectionHeading
-          eyebrow="Features"
-          title="Everything you need to sell on WhatsApp"
-          text="One platform for conversations, customers, catalog and orders, so nothing falls between tools."
-        />
+        <SectionHeading eyebrow={c.features.eyebrow} title={c.features.title} text={c.features.text} />
         <div className="grid gap-4 lg:grid-cols-3">
           <div className="relative overflow-hidden rounded-2xl border bg-card p-6 sm:p-8 lg:col-span-2">
             <Badge variant="ai" className="px-2 py-1">
@@ -563,25 +399,28 @@ function FeatureBento() {
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((f) => (
-            <div
-              key={f.title}
-              className="group rounded-2xl border bg-card p-6 transition hover:border-primary/30 hover:shadow-md motion-reduce:transition-none"
-            >
-              <span className="mb-4 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary transition group-hover:scale-105 motion-reduce:transition-none">
-                <f.icon className="size-5" aria-hidden />
-              </span>
-              <h3 className="font-semibold">{f.title}</h3>
-              <p className="mt-1.5 text-sm text-muted-foreground">{f.text}</p>
-            </div>
-          ))}
+          {c.features.items.map((f) => {
+            const Icon = HOME_ICON_MAP[f.icon];
+            return (
+              <div
+                key={f.title}
+                className="group rounded-2xl border bg-card p-6 transition hover:border-primary/30 hover:shadow-md motion-reduce:transition-none"
+              >
+                <span className="mb-4 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary transition group-hover:scale-105 motion-reduce:transition-none">
+                  <Icon className="size-5" aria-hidden />
+                </span>
+                <h3 className="font-semibold">{f.title}</h3>
+                <p className="mt-1.5 text-sm text-muted-foreground">{f.text}</p>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
   );
 }
 
-function Guardrails() {
+function Guardrails({ c }: { c: HomeContent }) {
   return (
     <section className="relative isolate overflow-hidden bg-[oklch(0.2_0.03_200)] text-white">
       <div
@@ -591,24 +430,24 @@ function Guardrails() {
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-20 sm:px-6 sm:py-24 lg:grid-cols-2">
         <div>
           <p className="mb-3 text-sm font-semibold tracking-wide text-[oklch(0.8_0.12_180)] uppercase">
-            Responsible AI
+            {c.guardrails.eyebrow}
           </p>
           <h2 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-            Sells with facts, not guesses
+            {c.guardrails.title}
           </h2>
-          <p className="mt-4 text-lg text-white/70">
-            The model never touches your database. Every action goes through a tool that is
-            authorised, validated and logged, so you can see exactly why the AI said what it said.
-          </p>
+          <p className="mt-4 text-lg text-white/70">{c.guardrails.text}</p>
           <dl className="mt-10 grid gap-6 sm:grid-cols-2">
-            {GUARDRAILS.map((g) => (
-              <div key={g.title}>
-                <dt className="flex items-center gap-2 font-medium">
-                  <g.icon className="size-4.5 text-[oklch(0.8_0.12_180)]" aria-hidden /> {g.title}
-                </dt>
-                <dd className="mt-1.5 text-sm text-white/65">{g.text}</dd>
-              </div>
-            ))}
+            {c.guardrails.items.map((g) => {
+              const Icon = HOME_ICON_MAP[g.icon];
+              return (
+                <div key={g.title}>
+                  <dt className="flex items-center gap-2 font-medium">
+                    <Icon className="size-4.5 text-[oklch(0.8_0.12_180)]" aria-hidden /> {g.title}
+                  </dt>
+                  <dd className="mt-1.5 text-sm text-white/65">{g.text}</dd>
+                </div>
+              );
+            })}
           </dl>
         </div>
 
@@ -647,19 +486,17 @@ function Guardrails() {
   );
 }
 
-function HowItWorks() {
+function HowItWorks({ c }: { c: HomeContent }) {
   return (
     <section
       id="how-it-works"
       className="mx-auto max-w-6xl scroll-mt-20 px-4 py-20 sm:px-6 sm:py-24"
     >
-      <SectionHeading
-        eyebrow="How it works"
-        title="Live in an afternoon"
-        text="Three steps from sign-up to your first AI-assisted sale."
-      />
+      <SectionHeading eyebrow={c.steps.eyebrow} title={c.steps.title} text={c.steps.text} />
       <ol className="grid gap-4 md:grid-cols-3">
-        {STEPS.map((s, i) => (
+        {c.steps.items.map((s, i) => {
+          const Icon = HOME_ICON_MAP[s.icon];
+          return (
           <li
             key={s.title}
             className="relative overflow-hidden rounded-2xl border bg-card p-6 sm:p-7"
@@ -671,7 +508,7 @@ function HowItWorks() {
               {i + 1}
             </span>
             <span className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/25">
-              <s.icon className="size-5" aria-hidden />
+              <Icon className="size-5" aria-hidden />
             </span>
             <h3 className="mt-5 font-semibold">
               <span className="sr-only">Step {i + 1}: </span>
@@ -679,52 +516,58 @@ function HowItWorks() {
             </h3>
             <p className="mt-1.5 text-sm text-muted-foreground">{s.text}</p>
           </li>
-        ))}
+          );
+        })}
       </ol>
     </section>
   );
 }
 
-function Security() {
+function Security({ c }: { c: HomeContent }) {
   return (
     <section className="border-y bg-muted/30">
       <div className="mx-auto grid max-w-6xl gap-12 px-4 py-20 sm:px-6 sm:py-24 lg:grid-cols-[2fr_3fr]">
         <div>
-          <SectionHeading
-            align="left"
-            eyebrow="Security & ownership"
-            title="Your data, your server"
-            text="Run Sellora AI on your own VPS with PostgreSQL and Redis, behind your own domain. No Docker needed, and nothing leaves your infrastructure except the APIs you connect."
-          />
+          <SectionHeading align="left" eyebrow={c.security.eyebrow} title={c.security.title} text={c.security.text} />
           <BrowserFrame url="your-domain.com/analytics" className="hidden lg:block">
             <ThemedShot name="analytics" alt="Sellora AI sales analytics" sizes="440px" />
           </BrowserFrame>
         </div>
         <div className="grid gap-4 self-start sm:grid-cols-2">
-          {SECURITY.map((s) => (
-            <div key={s.title} className="rounded-2xl border bg-card p-5">
-              <s.icon className="size-5 text-primary" aria-hidden />
-              <h3 className="mt-3 font-semibold">{s.title}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{s.text}</p>
-            </div>
-          ))}
+          {c.security.items.map((s) => {
+            const Icon = HOME_ICON_MAP[s.icon];
+            return (
+              <div key={s.title} className="rounded-2xl border bg-card p-5">
+                <Icon className="size-5 text-primary" aria-hidden />
+                <h3 className="mt-3 font-semibold">{s.title}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{s.text}</p>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
   );
 }
 
-function Pricing() {
+function formatPrice(amount: number, currency: string) {
+  try {
+    return new Intl.NumberFormat('en', { style: 'currency', currency, maximumFractionDigits: amount % 1 === 0 ? 0 : 2 }).format(amount);
+  } catch {
+    return `${currency} ${amount}`;
+  }
+}
+
+function Pricing({ c, pricing }: { c: HomeContent; pricing: HomePricing }) {
   return (
     <section id="pricing" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-20 sm:px-6 sm:py-24">
-      <SectionHeading
-        eyebrow="Pricing"
-        title="Simple, usage-based plans"
-        text="Start free. Upgrade when your conversations grow. Prices in USD per month."
-      />
+      <SectionHeading eyebrow={c.pricing.eyebrow} title={c.pricing.title} text={`${c.pricing.text} Prices in ${pricing.currency} per month.`.trim()} />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {PLAN_KEYS.map((k) => {
           const p = PLANS[k];
+          const own = (pricing.prices as Record<string, number | null | undefined>)[k];
+          const price = p.monthlyPrice === null ? null : p.monthlyPrice === 0 ? 0 : (own ?? (pricing.currency === 'USD' ? p.monthlyPrice : null));
+          const label = p.monthlyPrice === null ? 'Custom' : price === 0 ? 'Free' : price === null ? 'Ask us' : formatPrice(price, pricing.currency);
           return (
             <div
               key={k}
@@ -732,14 +575,14 @@ function Pricing() {
             >
               {p.highlighted && (
                 <span className="absolute -top-3 left-6 rounded-full bg-primary px-2.5 py-0.5 text-xs font-medium text-primary-foreground">
-                  Most popular
+                  {c.pricing.popularLabel}
                 </span>
               )}
               <p className="font-semibold">{p.name}</p>
               <p className="mt-1 min-h-10 text-xs text-muted-foreground">{p.description}</p>
-              <p className="my-5 text-4xl font-semibold tracking-tight">
-                {p.monthlyPrice === null ? 'Custom' : `$${p.monthlyPrice}`}
-                {p.monthlyPrice !== null && (
+              <p className={`my-5 font-semibold tracking-tight ${label.length > 8 ? 'text-3xl' : 'text-4xl'}`}>
+                {label}
+                {price !== null && price > 0 && (
                   <span className="text-sm font-normal text-muted-foreground"> /mo</span>
                 )}
               </p>
@@ -763,7 +606,7 @@ function Pricing() {
               </ul>
               <Button variant={p.highlighted ? 'default' : 'outline'} asChild>
                 <Link href="/register">
-                  {p.monthlyPrice === null ? 'Contact us' : 'Get started'}
+                  {p.monthlyPrice === null ? c.pricing.contactLabel : c.pricing.buyLabel}
                 </Link>
               </Button>
             </div>
@@ -774,16 +617,16 @@ function Pricing() {
   );
 }
 
-function Testimonials() {
-  if (TESTIMONIALS.length === 0) return null;
+function Testimonials({ c }: { c: HomeContent }) {
+  if (c.testimonials.length === 0) return null;
   return (
     <section className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
       <div className="grid gap-4 md:grid-cols-3">
-        {TESTIMONIALS.map((t) => (
+        {c.testimonials.map((t) => (
           <figure key={t.name} className="rounded-2xl border bg-card p-6">
             <blockquote className="text-sm">“{t.quote}”</blockquote>
             <figcaption className="mt-4 text-sm font-medium">
-              {t.name} <span className="font-normal text-muted-foreground">· {t.role}</span>
+              {t.name} {t.role && <span className="font-normal text-muted-foreground">· {t.role}</span>}
             </figcaption>
           </figure>
         ))}
@@ -792,18 +635,13 @@ function Testimonials() {
   );
 }
 
-function Faq() {
+function Faq({ c }: { c: HomeContent }) {
   return (
     <section id="faq" className="scroll-mt-20 border-t bg-muted/30">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-20 sm:px-6 sm:py-24 lg:grid-cols-[2fr_3fr]">
-        <SectionHeading
-          align="left"
-          eyebrow="FAQ"
-          title="Questions, answered"
-          text="Can’t find what you need? Sign up for free and explore the demo workspace."
-        />
+        <SectionHeading align="left" eyebrow={c.faq.eyebrow} title={c.faq.title} text={c.faq.text} />
         <div className="divide-y rounded-2xl border bg-card">
-          {FAQ.map((f) => (
+          {c.faq.items.map((f) => (
             <details key={f.q} className="group p-5 sm:p-6">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium [&::-webkit-details-marker]:hidden">
                 {f.q}
@@ -823,7 +661,7 @@ function Faq() {
   );
 }
 
-function FinalCta() {
+function FinalCta({ c }: { c: HomeContent }) {
   return (
     <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
       <div className="relative isolate overflow-hidden rounded-3xl bg-[oklch(0.3_0.07_185)] px-6 pt-14 text-white sm:px-12 sm:pt-16 lg:grid lg:grid-cols-2 lg:gap-10 lg:pt-0">
@@ -833,21 +671,18 @@ function FinalCta() {
         />
         <div className="text-center lg:py-20 lg:text-left">
           <h2 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-            Your next customer is already typing.
+            {c.cta.headline}
           </h2>
-          <p className="mx-auto mt-4 max-w-md text-white/75 lg:mx-0">
-            Set up Sellora AI and let your AI sales agent answer, recommend and sell, while your
-            team focuses on the conversations that matter.
-          </p>
+          <p className="mx-auto mt-4 max-w-md text-white/75 lg:mx-0">{c.cta.text}</p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">
             <Button
               size="lg"
               asChild
               className="bg-white text-[oklch(0.3_0.07_185)] hover:bg-white/90"
             >
-              <Link href="/register">
-                Start selling smarter <ArrowRight />
-              </Link>
+              <AnchorLink href={c.cta.primaryCta.href}>
+                {c.cta.primaryCta.label} <ArrowRight />
+              </AnchorLink>
             </Button>
             <Button
               size="lg"
@@ -855,7 +690,7 @@ function FinalCta() {
               asChild
               className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"
             >
-              <Link href="/login">Sign in</Link>
+              <AnchorLink href={c.cta.secondaryCta.href}>{c.cta.secondaryCta.label}</AnchorLink>
             </Button>
           </div>
         </div>
@@ -873,49 +708,49 @@ function FinalCta() {
   );
 }
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const { content: c, pricing } = await getHome();
+  const on = c.sections;
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
-    name: 'Sellora AI',
+    name: c.brandName,
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web',
-    description: 'AI-powered WhatsApp sales and commerce automation platform.',
-    offers: PLAN_KEYS.filter((k) => PLANS[k].monthlyPrice !== null).map((k) => ({
-      '@type': 'Offer',
-      name: PLANS[k].name,
-      price: PLANS[k].monthlyPrice,
-      priceCurrency: 'USD',
-    })),
+    description: c.seo.description,
+    offers: PLAN_KEYS.filter((k) => PLANS[k].monthlyPrice !== null).map((k) => {
+      const own = (pricing.prices as Record<string, number | null | undefined>)[k];
+      return {
+        '@type': 'Offer',
+        name: PLANS[k].name,
+        price: own ?? PLANS[k].monthlyPrice,
+        priceCurrency: own ? pricing.currency : 'USD',
+      };
+    }),
   };
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <ScrollToAnchor />
-      <Hero />
-      <Foundations />
-      <ConversationToOrder />
-      <section id="product" className="scroll-mt-20 border-t">
-        <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
-          <SectionHeading
-            eyebrow="Product tour"
-            title="See Sellora AI in action"
-            text="Real screens from the demo workspace. Pick an area to explore."
-          />
-          <ProductTour />
-        </div>
-      </section>
-      <FeatureBento />
-      <Guardrails />
-      <HowItWorks />
-      <Security />
-      <Pricing />
-      <Testimonials />
-      <Faq />
-      <FinalCta />
+      <Hero c={c} />
+      {on.foundations && <Foundations c={c} />}
+      {on.flow && <ConversationToOrder c={c} />}
+      {on.tour && (
+        <section id="product" className="scroll-mt-20 border-t">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
+            <SectionHeading eyebrow={c.tour.eyebrow} title={c.tour.title} text={c.tour.text} />
+            <ProductTour />
+          </div>
+        </section>
+      )}
+      {on.features && <FeatureBento c={c} />}
+      {on.guardrails && <Guardrails c={c} />}
+      {on.steps && <HowItWorks c={c} />}
+      {on.security && <Security c={c} />}
+      {on.pricing && <Pricing c={c} pricing={pricing} />}
+      {on.testimonials && <Testimonials c={c} />}
+      {on.faq && <Faq c={c} />}
+      {on.cta && <FinalCta c={c} />}
     </>
   );
 }

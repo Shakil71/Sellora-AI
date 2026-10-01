@@ -4,4 +4,5 @@ export * from './automation';
 export * from './money';
 export * from './ai';
 export * from './integrations';
+export * from './home-content';
 export * from './password';

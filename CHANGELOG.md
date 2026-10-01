@@ -10,6 +10,9 @@
 - Dashboard "Get ready to sell" checklist and an AI setup guide for business owners (docs/AI_SETUP.md).
 - Redesigned installer and sign-in pages (animated WhatsApp + AI showcase), installer email and AI-key tests, automatic sign-in after install.
 
+### Added (continued)
+- **Editable home page** (Platform admin → Edit home page): the platform owner can change the brand name, headline, buttons, feature cards, steps, security and AI points, FAQ, testimonials, footer and search-engine text; add, delete, reorder or hide sections. Plan prices on the home page follow Platform admin → Plan payments.
+
 ### Security
 - Installer now requires a secret token (generated automatically if you do not set one), closing a takeover window on fresh installs.
 - Stronger passwords: 10+ characters and a list of common passwords is refused.

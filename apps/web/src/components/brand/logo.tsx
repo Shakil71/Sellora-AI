@@ -29,13 +29,18 @@ export function LogoMark({ className, size = 32, title = 'Sellora AI' }: { class
   );
 }
 
-export function Logo({ className, compact = false }: { className?: string; compact?: boolean }) {
+export function Logo({ className, compact = false, name = 'Sellora AI' }: { className?: string; compact?: boolean; name?: string }) {
+  // The last word is drawn in the brand colour: "Sellora AI" -> "Sellora" + " AI".
+  const words = name.trim().split(/\s+/);
+  const last = words.length > 1 ? words.pop()! : '';
+  const first = words.join(' ');
   return (
     <span className={cn('inline-flex items-center gap-2', className)}>
       <LogoMark size={28} />
       {!compact && (
         <span className="text-[15px] font-semibold tracking-tight">
-          Sellora<span className="text-primary"> AI</span>
+          {first}
+          {last && <span className="text-primary"> {last}</span>}
         </span>
       )}
     </span>

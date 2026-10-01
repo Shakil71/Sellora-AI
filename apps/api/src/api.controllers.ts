@@ -30,6 +30,8 @@ import { PaymentGatewaysPublicController, PaymentMethodsController } from './mod
 
 import { ProductImportController } from './modules/product-import/product-import.controller';
 
+import { HomepageAdminController, SitePublicController } from './modules/site/site.controller';
+
 export const API_CONTROLLERS: Type[] = [
   HealthController,
   AuthController,
@@ -68,4 +70,6 @@ export const API_CONTROLLERS: Type[] = [
   MetaWebhookController,
   PaymentMethodsController,
   PaymentGatewaysPublicController,
+  SitePublicController,
+  HomepageAdminController,
 ];

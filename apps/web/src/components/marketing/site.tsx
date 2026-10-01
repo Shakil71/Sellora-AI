@@ -12,12 +12,12 @@ const NAV = [
   { href: '/#faq', label: 'FAQ' },
 ];
 
-export function SiteHeader() {
+export function SiteHeader({ brandName = 'Sellora AI' }: { brandName?: string }) {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6 lg:grid lg:grid-cols-[1fr_auto_1fr]">
-        <Link href="/" aria-label="Sellora AI home" className="justify-self-start">
-          <Logo />
+        <Link href="/" aria-label={`${brandName} home`} className="justify-self-start">
+          <Logo name={brandName} />
         </Link>
         <nav
           aria-label="Main"
@@ -48,15 +48,13 @@ export function SiteHeader() {
   );
 }
 
-export function SiteFooter() {
+export function SiteFooter({ brandName = 'Sellora AI', description = 'AI-powered WhatsApp sales and commerce automation for growing businesses.', legal = 'WhatsApp is a trademark of its respective owner; Sellora AI uses the official WhatsApp Cloud API.' }: { brandName?: string; description?: string; legal?: string }) {
   return (
     <footer className="border-t">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-4">
         <div className="space-y-3 md:col-span-2">
-          <Logo />
-          <p className="max-w-sm text-sm text-muted-foreground">
-            AI-powered WhatsApp sales and commerce automation for growing businesses.
-          </p>
+          <Logo name={brandName} />
+          <p className="max-w-sm text-sm text-muted-foreground">{description}</p>
         </div>
         <div>
           <p className="mb-3 text-sm font-semibold">Product</p>
@@ -92,8 +90,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t py-6 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Sellora AI. WhatsApp is a trademark of its respective owner;
-        Sellora AI uses the official WhatsApp Cloud API.
+        © {new Date().getFullYear()} {brandName}. {legal}
       </div>
     </footer>
   );

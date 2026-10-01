@@ -2,7 +2,8 @@
 
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Building2, Check, Inbox, RotateCcw, Server, Trash2, Wallet, X } from 'lucide-react';
+import Link from 'next/link';
+import { Building2, Check, Inbox, LayoutTemplate, RotateCcw, Server, Trash2, Wallet, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { PLAN_KEYS } from '@sellora/shared';
 import { api, type Paginated } from '@/lib/api';
@@ -211,7 +212,17 @@ export default function AdminPage() {
   if (!me.user.isSuperAdmin) return <EmptyState title="Platform administrators only" description="You don't have access to this area." />;
   return (
     <>
-      <PageHeader title="Platform admin" description="Workspaces, plans and background job health across the installation." />
+      <PageHeader
+        title="Platform admin"
+        description="Workspaces, plans and background job health across the installation."
+        actions={
+          <Button variant="outline" asChild>
+            <Link href="/admin/homepage">
+              <LayoutTemplate /> Edit home page
+            </Link>
+          </Button>
+        }
+      />
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Workspaces" value={number(overview.data?.tenants)} loading={overview.isLoading} icon={Building2} />
         <StatCard label="Users" value={number(overview.data?.users)} loading={overview.isLoading} />
