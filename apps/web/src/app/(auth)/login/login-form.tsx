@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQueryClient } from '@tanstack/react-query';
-import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Lock, Mail, ShieldCheck, Sparkles } from 'lucide-react';
 import { api, ApiError, errorMessage } from '@/lib/api';
 import type { Me } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -102,8 +102,11 @@ export function LoginForm() {
   return (
     <div className="space-y-7">
       <div className="space-y-2">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-ai-soft px-2.5 py-1 text-xs font-medium text-ai">
+          <Sparkles className="size-3" aria-hidden /> Your AI agent is waiting
+        </span>
         <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
-        <p className="text-sm text-muted-foreground">Sign in to your Sellora AI workspace.</p>
+        <p className="text-sm text-muted-foreground">Sign in to see today&apos;s chats, orders and sales.</p>
       </div>
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         {error && (
@@ -112,7 +115,10 @@ export function LoginForm() {
           </div>
         )}
         <Field label="Email" htmlFor="email" error={form.formState.errors.email?.message}>
-          <Input id="email" type="email" autoComplete="email" autoFocus className="h-10" aria-invalid={!!form.formState.errors.email} {...form.register('email')} />
+          <div className="relative">
+            <Mail className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+            <Input id="email" type="email" autoComplete="email" autoFocus placeholder="you@company.com" className="h-11 pl-9" aria-invalid={!!form.formState.errors.email} {...form.register('email')} />
+          </div>
         </Field>
         <Field
           label={
@@ -127,11 +133,13 @@ export function LoginForm() {
           error={form.formState.errors.password?.message}
         >
           <div className="relative">
+            <Lock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
             <Input
               id="password"
               type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
-              className="h-10 pr-10"
+              placeholder="Your password"
+              className="h-11 pr-10 pl-9"
               aria-invalid={!!form.formState.errors.password}
               {...form.register('password')}
             />
@@ -146,7 +154,7 @@ export function LoginForm() {
           </div>
         </Field>
         <Button type="submit" className="w-full" size="lg" loading={form.formState.isSubmitting}>
-          Sign in
+          Sign in <ArrowRight />
         </Button>
       </form>
       <p className="text-center text-sm text-muted-foreground">
