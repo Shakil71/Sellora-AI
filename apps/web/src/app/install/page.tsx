@@ -20,6 +20,7 @@ import {
   Rocket,
   Settings2,
   ShieldCheck,
+  Sparkles,
   Table2,
   TriangleAlert,
   UserCog,
@@ -212,68 +213,95 @@ function PasswordInput(props: React.ComponentProps<typeof Input>) {
 }
 
 function Shell({ children, step }: { children: React.ReactNode; step?: number }) {
+  const total = STEPS.length;
+  const current = step ?? total; // no step = finished or standalone message: everything shows as done
+  const percent = Math.round((Math.min(current, total) / total) * 100);
   return (
-    <div className="min-h-dvh bg-muted/30">
-      <div className="mx-auto grid min-h-dvh max-w-6xl lg:grid-cols-[320px_minmax(0,1fr)]">
-        <aside className="hidden flex-col gap-8 bg-gradient-to-b from-primary to-[#0f3f3c] p-8 text-primary-foreground lg:flex">
-          <div className="[&_*]:!text-white">
-            <Logo />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold">Welcome to Sellora AI</h2>
-            <p className="mt-1 text-sm text-white/75">
-              Follow these steps once. It takes about five minutes and you can leave optional steps for later.
-            </p>
-          </div>
-          <ol className="space-y-1">
-            {STEPS.map((t, i) => {
-              const active = i === step;
-              const done = step !== undefined && i < step;
-              return (
-                <li
-                  key={t.title}
-                  className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2.5 transition',
-                    active ? 'bg-white/15' : 'opacity-80',
-                  )}
-                  aria-current={active ? 'step' : undefined}
-                >
-                  <span
-                    className={cn(
-                      'flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
-                      done ? 'bg-white text-primary' : active ? 'bg-white/90 text-primary' : 'border border-white/40',
-                    )}
-                  >
-                    {done ? <CheckCircle2 className="size-4" aria-hidden /> : i + 1}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-medium">{t.title}</span>
-                    <span className="block truncate text-xs text-white/65">{t.short}</span>
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
-          <p className="mt-auto text-xs text-white/60">
-            Stuck? Every step explains what it does and how to fix common problems. The full guide is in
-            docs/INSTALLATION.md.
+    <div className="grid min-h-dvh lg:grid-cols-[minmax(360px,0.8fr)_minmax(0,1.3fr)]">
+      <aside className="relative hidden flex-col overflow-hidden bg-[oklch(0.2_0.045_190)] p-10 text-white lg:flex xl:p-12">
+        <div className="bg-grid pointer-events-none absolute inset-0 opacity-[0.07]" aria-hidden />
+        <div className="pointer-events-none absolute -top-32 -left-24 size-[480px] rounded-full bg-[#14b8a6] opacity-30 blur-[110px]" style={{ animation: 'auth-aurora 14s ease-in-out infinite' }} aria-hidden />
+        <div className="pointer-events-none absolute right-[-120px] bottom-[-80px] size-[420px] rounded-full bg-[#8b5cf6] opacity-30 blur-[110px]" style={{ animation: 'auth-aurora 18s ease-in-out infinite reverse' }} aria-hidden />
+        <div className="pointer-events-none absolute top-1/2 left-1/3 size-56 rounded-full bg-[#25d366] opacity-15 blur-[100px]" aria-hidden />
+
+        <div className="relative z-10 [&_*]:!text-white">
+          <Logo />
+        </div>
+
+        <div className="relative z-10 mt-10" style={{ animation: 'auth-rise 0.7s ease-out both' }}>
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur">
+            <Sparkles className="size-3.5 text-violet-300" aria-hidden /> Guided setup · about 5 minutes
+          </span>
+          <h2 className="mt-4 text-3xl leading-tight font-semibold tracking-tight text-balance">
+            Launch your{' '}
+            <span className="bg-gradient-to-r from-emerald-300 via-teal-200 to-violet-300 bg-[length:200%_auto] bg-clip-text text-transparent" style={{ animation: 'auth-shimmer 6s linear infinite' }}>
+              AI sales platform
+            </span>
+          </h2>
+          <p className="mt-2 text-sm text-white/70">
+            WhatsApp, website chat, Messenger and Instagram, answered by your AI agent, with orders and payments built in.
           </p>
-        </aside>
-        <main className="px-4 py-6 sm:px-8 sm:py-10">
-          <div className="mb-6 flex items-center justify-between lg:hidden">
-            <Logo />
-            {step !== undefined && (
-              <span className="text-xs text-muted-foreground">
-                Step {step + 1} of {STEPS.length}
-              </span>
-            )}
+        </div>
+
+        <ol className="relative z-10 mt-8 space-y-1.5" style={{ animation: 'auth-rise 0.9s 0.1s ease-out both' }}>
+          {STEPS.map((t, i) => {
+            const active = i === step;
+            const done = i < current;
+            return (
+              <li
+                key={t.title}
+                className={cn(
+                  'flex items-center gap-3 rounded-xl border px-3 py-2.5 backdrop-blur transition',
+                  active ? 'border-white/25 bg-white/15 shadow-lg' : done ? 'border-white/10 bg-white/5' : 'border-transparent opacity-70',
+                )}
+                aria-current={active ? 'step' : undefined}
+              >
+                <span
+                  className={cn(
+                    'flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+                    done ? 'bg-emerald-400 text-emerald-950' : active ? 'bg-white text-[#0f3f3c]' : 'border border-white/35',
+                  )}
+                >
+                  {done ? <CheckCircle2 className="size-4" aria-hidden /> : i + 1}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium">{t.title}</span>
+                  <span className="block truncate text-xs text-white/60">{t.short}</span>
+                </span>
+                <t.icon className={cn('size-4 shrink-0', active ? 'text-white' : 'text-white/40')} aria-hidden />
+              </li>
+            );
+          })}
+        </ol>
+
+        <div className="relative z-10 mt-auto pt-8">
+          <div className="flex items-center justify-between text-xs text-white/70">
+            <span>Setup progress</span>
+            <span className="tabular">{percent}%</span>
           </div>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/15" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
+            <div className="h-full rounded-full bg-gradient-to-r from-emerald-300 to-teal-200 transition-all duration-500" style={{ width: `${percent}%` }} />
+          </div>
+          <p className="mt-4 text-xs text-white/55">Stuck? Each step explains what it does and how to fix common problems. Full guide: docs/INSTALLATION.md.</p>
+        </div>
+      </aside>
+
+      <main className="relative overflow-hidden bg-background px-4 py-6 sm:px-10 sm:py-10">
+        <div className="pointer-events-none absolute -top-40 -right-40 size-[420px] rounded-full bg-primary/10 blur-3xl" aria-hidden />
+        <div className="pointer-events-none absolute -bottom-40 -left-32 size-[380px] rounded-full bg-ai/10 blur-3xl" aria-hidden />
+        <div className="relative mb-5 flex items-center justify-between lg:hidden">
+          <Logo />
           {step !== undefined && (
-            <Progress value={((step + 1) / STEPS.length) * 100} className="mb-6 h-1.5 lg:hidden" aria-label="Installation progress" />
+            <span className="text-xs text-muted-foreground">
+              Step {step + 1} of {total}
+            </span>
           )}
-          <div className="mx-auto max-w-2xl">{children}</div>
-        </main>
-      </div>
+        </div>
+        {step !== undefined && <Progress value={((step + 1) / total) * 100} className="relative mb-6 h-1.5 lg:hidden" aria-label="Installation progress" />}
+        <div className="relative mx-auto flex min-h-full max-w-2xl flex-col justify-center lg:min-h-[calc(100dvh-5rem)]" style={{ animation: 'auth-rise 0.6s ease-out both' }}>
+          {children}
+        </div>
+      </main>
     </div>
   );
 }
@@ -467,7 +495,7 @@ export default function InstallPage() {
 
   return (
     <Shell step={step}>
-      <Card>
+      <Card className="border-border/70 bg-card/85 shadow-xl shadow-primary/5 backdrop-blur">
         <CardContent className="space-y-6 p-6 sm:p-8">
           {s.tokenRequired && (
             <Field
@@ -486,6 +514,19 @@ export default function InstallPage() {
                 title="Let’s check your server"
                 intro="Sellora AI needs a few things on your server. We test each one now so there are no surprises later."
               />
+              <div className="grid gap-2 sm:grid-cols-3">
+                {[
+                  { icon: Database, title: 'Server basics', text: 'Node.js, PostgreSQL and Redis, already installed by your host or setup script.' },
+                  { icon: Mail, title: 'Email account', text: 'Optional. Any SMTP login lets Sellora send invitations and receipts.' },
+                  { icon: Bot, title: 'AI key', text: 'Optional. An OpenAI key powers the sales agent. Businesses can add their own later.' },
+                ].map((n) => (
+                  <div key={n.title} className="rounded-xl border bg-muted/30 p-3">
+                    <n.icon className="size-4 text-primary" aria-hidden />
+                    <p className="mt-1.5 text-sm font-medium">{n.title}</p>
+                    <p className="text-xs text-muted-foreground">{n.text}</p>
+                  </div>
+                ))}
+              </div>
               <div className="flex items-center gap-2 text-sm">
                 {requirementsOk ? (
                   <span className="flex items-center gap-1.5 font-medium text-success">

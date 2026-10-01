@@ -69,7 +69,7 @@ export class OnboardingService {
     const ownKey = Boolean(decryptJson<{ apiKey?: string }>(tenant.aiConfigEnc)?.apiKey);
     const items = [
       { key: 'ai-key', title: 'Connect your AI', description: 'Add an OpenAI key so the agent can reply.', href: '/settings/ai', done: ownKey || Boolean(env.OPENAI_API_KEY) },
-      { key: 'products', title: 'Add your products', description: 'The AI quotes prices and stock from your catalog.', href: '/products/new', done: products > 0 },
+      { key: 'products', title: 'Add your products', description: 'Add them one by one, or import your whole store automatically.', href: '/products', done: products > 0 },
       { key: 'knowledge', title: 'Teach the AI your policies', description: 'Upload delivery, returns and FAQ documents.', href: '/ai/knowledge', done: documents > 0 },
       { key: 'agent', title: 'Set up your AI agent', description: 'Choose its tone, rules and what it may do.', href: '/ai/agents', done: agents.length > 0 },
       { key: 'channel', title: 'Connect a channel', description: 'WhatsApp, website chat, Messenger or Instagram.', href: '/integrations', done: whatsapp + channels > 0 },

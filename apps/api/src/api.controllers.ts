@@ -28,6 +28,8 @@ import { InstallController } from './modules/install/install.controller';
 import { IntegrationsController, MetaWebhookController, WebChatPublicController } from './modules/integrations/integrations.controller';
 import { PaymentGatewaysPublicController, PaymentMethodsController } from './modules/payment-gateways/payment-gateways.controller';
 
+import { ProductImportController } from './modules/product-import/product-import.controller';
+
 export const API_CONTROLLERS: Type[] = [
   HealthController,
   AuthController,
@@ -43,6 +45,7 @@ export const API_CONTROLLERS: Type[] = [
   PipelinesController,
   DealsController,
   TasksController,
+  ProductImportController,
   ProductsController,
   CategoriesController,
   InventoryController,

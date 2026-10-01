@@ -37,6 +37,8 @@ import { PlanPaymentsService } from './modules/billing/plan-payments.service';
 import { PaymentMethodsService } from './modules/payment-gateways/payment-methods.service';
 
 /** Business services registered in DomainModule (shared by API and worker). */
+import { ProductImportService } from './modules/product-import/product-import.service';
+
 export const DOMAIN_PROVIDERS: Provider[] = [
   EventsService,
   ActivityService,
@@ -75,4 +77,5 @@ export const DOMAIN_PROVIDERS: Provider[] = [
   WebhooksService,
   PaymentMethodsService,
   PlanPaymentsService,
+  ProductImportService,
 ];

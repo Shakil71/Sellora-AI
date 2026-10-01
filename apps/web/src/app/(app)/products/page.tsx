@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { Package, Plus } from 'lucide-react';
+import { Download, Package, Plus } from 'lucide-react';
 import { ProductThumb } from '@/features/products/product-thumb';
 import { api, type Paginated } from '@/lib/api';
 import { money } from '@/lib/format';
@@ -36,11 +36,18 @@ export default function ProductsPage() {
         description="Your catalog. Active products can be recommended and sold by the AI sales agent."
         actions={
           can('products.create') && (
-            <Button asChild>
-              <Link href="/products/new">
-                <Plus /> Add product
-              </Link>
-            </Button>
+            <>
+              <Button variant="outline" asChild>
+                <Link href="/products/import">
+                  <Download /> Import from store or file
+                </Link>
+              </Button>
+              <Button asChild>
+                <Link href="/products/new">
+                  <Plus /> Add product
+                </Link>
+              </Button>
+            </>
           )
         }
       />
