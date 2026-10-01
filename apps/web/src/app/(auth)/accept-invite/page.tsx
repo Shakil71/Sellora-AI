@@ -79,7 +79,7 @@ function Accept() {
       <Field
         label={inv.accountExists ? 'Your password' : 'Create a password'}
         htmlFor="password"
-        hint={inv.accountExists ? 'Confirm with the password of your existing account.' : 'At least 8 characters with a letter and a number.'}
+        hint={inv.accountExists ? 'Confirm with the password of your existing account.' : 'At least 10 characters with a letter and a number.'}
       >
         <Input id="password" type="password" required autoComplete={inv.accountExists ? 'current-password' : 'new-password'} className="h-10" value={password} onChange={(e) => setPassword(e.target.value)} />
       </Field>

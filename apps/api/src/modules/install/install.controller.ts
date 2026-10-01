@@ -7,6 +7,7 @@ import {
   HttpCode,
   Injectable,
   Logger,
+  OnModuleInit,
   Post,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
@@ -84,7 +85,7 @@ function envValue(v: string) {
  * installation is complete, and can require INSTALLER_TOKEN.
  */
 @Injectable()
-export class InstallService {
+export class InstallService implements OnModuleInit {
   private readonly logger = new Logger(InstallService.name);
 
   constructor(
@@ -95,6 +96,46 @@ export class InstallService {
     private readonly tenants: TenantsService,
     private readonly permissions: PermissionSyncService,
   ) {}
+
+  private generatedToken?: string;
+
+  private tokenFile() {
+    return path.resolve(path.dirname(this.envPath()), 'storage', 'install-token.txt');
+  }
+
+  /**
+   * The secret the installer asks for. INSTALLER_TOKEN from .env wins; otherwise a
+   * random one is created on first use and saved to storage/install-token.txt (mode 600),
+   * so a stranger who finds /install before you finish cannot create the administrator.
+   */
+  expectedToken(): { value: string; source: 'env' | 'file' } {
+    if (env.INSTALLER_TOKEN) return { value: env.INSTALLER_TOKEN, source: 'env' };
+    if (this.generatedToken) return { value: this.generatedToken, source: 'file' };
+    try {
+      const file = this.tokenFile();
+      if (fs.existsSync(file)) this.generatedToken = fs.readFileSync(file, 'utf8').trim();
+      if (!this.generatedToken) {
+        this.generatedToken = randomBytes(16).toString('hex');
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, `${this.generatedToken}\n`, { mode: 0o600 });
+      }
+    } catch (err) {
+      // Unwritable disk: keep the token in memory and in the log, so the installer is still protected.
+      this.generatedToken ??= randomBytes(16).toString('hex');
+      this.logger.warn(`Could not save the installer token file: ${(err as Error).message}`);
+    }
+    return { value: this.generatedToken, source: 'file' };
+  }
+
+  async onModuleInit() {
+    if (await this.isInstalled()) return;
+    const t = this.expectedToken();
+    this.logger.warn(
+      t.source === 'env'
+        ? 'Sellora AI is not installed yet. Open /install and enter INSTALLER_TOKEN from your .env file.'
+        : `Sellora AI is not installed yet. Installer token: ${t.value}  (also saved in ${this.tokenFile()}). Open /install and enter it.`,
+    );
+  }
 
   private lockFile() {
     return path.resolve(path.dirname(this.envPath()), 'storage', 'installed.lock');
@@ -115,7 +156,8 @@ export class InstallService {
 
   async assertNotInstalled(token?: string) {
     if (await this.isInstalled()) throw new ConflictError('Sellora AI is already installed.');
-    if (env.INSTALLER_TOKEN && (!token || !safeEqual(token, env.INSTALLER_TOKEN))) {
+    const expected = this.expectedToken().value;
+    if (!token || !safeEqual(token.trim(), expected)) {
       throw new ForbiddenException({
         code: 'INSTALLER_TOKEN',
         message: 'A valid installer token is required.',
@@ -147,7 +189,12 @@ export class InstallService {
     }
     return {
       installed,
-      tokenRequired: Boolean(env.INSTALLER_TOKEN),
+      tokenRequired: !installed,
+      tokenHint: installed
+        ? null
+        : env.INSTALLER_TOKEN
+          ? 'Enter the INSTALLER_TOKEN value from your .env file.'
+          : `Run  cat ${this.tokenFile()}  on the server (or look at the API log with  pm2 logs sellora-api ) and paste the code here.`,
       requirements: [
         {
           key: 'node',
@@ -389,6 +436,12 @@ export class InstallService {
       update: { value: { at: new Date().toISOString() } },
     });
     try {
+      fs.rmSync(this.tokenFile(), { force: true });
+      this.generatedToken = undefined;
+    } catch {
+      /* the installer is locked anyway */
+    }
+    try {
       fs.mkdirSync(path.dirname(this.lockFile()), { recursive: true });
       fs.writeFileSync(this.lockFile(), new Date().toISOString());
     } catch (err) {
@@ -408,6 +461,14 @@ export class InstallController {
   @Get('status')
   status() {
     return this.install.status();
+  }
+
+  /** Lets the installer check the token before showing any step. */
+  @Post('check-token')
+  @HttpCode(200)
+  async checkToken(@Headers('x-installer-token') token?: string) {
+    await this.install.assertNotInstalled(token);
+    return { ok: true };
   }
 
   @Post('test-database')

@@ -25,7 +25,7 @@ function csrfOf(agent: Agent): string {
 async function signUp(label: string) {
   const agent = request.agent(app.getHttpServer());
   const email = `${label}-${randomUUID().slice(0, 8)}@test.local`;
-  const res = await agent.post('/api/v1/auth/register').send({ name: `${label} Owner`, email, password: 'Passw0rd123', workspaceName: `${label} Shop` });
+  const res = await agent.post('/api/v1/auth/register').send({ name: `${label} Owner`, email, password: 'Tr1cky-Banana-77', workspaceName: `${label} Shop` });
   expect(res.status).toBe(201);
   return { agent, email, tenantId: res.body.data.workspace.id as string, write: (m: 'post' | 'patch' | 'put' | 'delete', url: string) => agent[m](url).set('x-csrf-token', csrfOf(agent)) };
 }

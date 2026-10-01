@@ -8,7 +8,15 @@ import type { Env } from './config/env';
 export function configureApp(app: NestExpressApplication, env: Env) {
   if (env.TRUST_PROXY) app.set('trust proxy', 1);
   app.disable('x-powered-by');
-  app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+  app.use(
+    helmet({
+      // The API only returns JSON and files, never pages: it must not be framed or run anything.
+      contentSecurityPolicy: { useDefaults: false, directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"], baseUri: ["'none'"], formAction: ["'none'"] } },
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      hsts: env.COOKIE_SECURE ? { maxAge: 31_536_000, includeSubDomains: true } : false,
+      referrerPolicy: { policy: 'no-referrer' },
+    }),
+  );
   app.use(cookieParser());
   app.useBodyParser('json', { limit: '2mb' });
   app.useBodyParser('urlencoded', { limit: '1mb', extended: true });

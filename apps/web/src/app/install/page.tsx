@@ -29,6 +29,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { passwordProblem } from '@sellora/shared';
 import { api } from '@/lib/api';
 import { Logo } from '@/components/brand/logo';
 import { Button } from '@/components/ui/button';
@@ -46,6 +47,7 @@ import { cn } from '@/lib/utils';
 interface Status {
   installed: boolean;
   tokenRequired: boolean;
+  tokenHint: string | null;
   requirements: Array<{ key: string; label: string; ok: boolean; hint: string }>;
   migrated: boolean;
   hasAdmin: boolean;
@@ -129,7 +131,8 @@ async function call<T>(path: string, token: string, body?: unknown): Promise<T> 
 
 function passwordChecks(pw: string) {
   return [
-    { ok: pw.length >= 8, label: 'At least 8 characters' },
+    { ok: pw.length >= 10, label: 'At least 10 characters' },
+    { ok: !pw || passwordProblem(pw) === null || !passwordProblem(pw)!.includes('common'), label: 'Not a common password' },
     { ok: /[A-Za-z]/.test(pw), label: 'A letter' },
     { ok: /\d/.test(pw), label: 'A number' },
   ];
@@ -498,13 +501,20 @@ export default function InstallPage() {
       <Card className="border-border/70 bg-card/85 shadow-xl shadow-primary/5 backdrop-blur">
         <CardContent className="space-y-6 p-6 sm:p-8">
           {s.tokenRequired && (
-            <Field
-              label="Installer token"
-              htmlFor="i-token"
-              hint="Your server is protected. Enter the INSTALLER_TOKEN value from the .env file to continue."
-            >
-              <Input id="i-token" type="password" value={token} onChange={(e) => setToken(e.target.value)} />
-            </Field>
+            <section className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
+              <div className="flex items-center gap-2.5">
+                <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                  <ShieldCheck className="size-4" aria-hidden />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold">Security check</p>
+                  <p className="text-xs text-muted-foreground">Only someone with access to this server can install. This stops strangers from taking over a fresh site.</p>
+                </div>
+              </div>
+              <Field label="Installer token" htmlFor="i-token" hint={s.tokenHint ?? undefined}>
+                <PasswordInput id="i-token" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} className="font-mono" />
+              </Field>
+            </section>
           )}
 
           {step === 0 && (
@@ -555,7 +565,17 @@ export default function InstallPage() {
                 <Button variant="outline" onClick={() => status.refetch()} loading={status.isFetching}>
                   Check again
                 </Button>
-                <Button onClick={() => setStep(1)} disabled={!requirementsOk} className="ml-auto">
+                <Button
+                  onClick={() =>
+                    act('token', async () => {
+                      if (s.tokenRequired) await call('check-token', token, {});
+                      setStep(1);
+                    })
+                  }
+                  loading={busy === 'token'}
+                  disabled={!requirementsOk || (s.tokenRequired && token.trim().length < 8)}
+                  className="ml-auto"
+                >
                   Continue <ArrowRight />
                 </Button>
               </Nav>

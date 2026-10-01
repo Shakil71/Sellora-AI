@@ -58,7 +58,7 @@ function ResetForm() {
     <form onSubmit={submit} className="space-y-5">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Choose a new password</h1>
-        <p className="text-sm text-muted-foreground">Use at least 8 characters with a letter and a number.</p>
+        <p className="text-sm text-muted-foreground">Use at least 10 characters with a letter and a number. Common passwords are not allowed.</p>
       </div>
       {error && (
         <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/8 px-3 py-2.5 text-sm text-destructive">

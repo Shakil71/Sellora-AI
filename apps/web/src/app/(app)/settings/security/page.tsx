@@ -93,7 +93,7 @@ function AccountSecurity() {
   return (
     <Card>
       <CardContent>
-        <Section title="Password" description="Use at least 8 characters with a letter and a number.">
+        <Section title="Password" description="Use at least 10 characters with a letter and a number. Common passwords are not allowed.">
           <div className="max-w-md space-y-3">
             <Field label="Current password" htmlFor="pw-current">
               <Input id="pw-current" type="password" autoComplete="current-password" value={pw.currentPassword} onChange={(e) => setPw({ ...pw, currentPassword: e.target.value })} />

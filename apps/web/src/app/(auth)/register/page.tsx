@@ -19,7 +19,7 @@ const schema = z.object({
   email: z.string().trim().email('Enter a valid email address'),
   password: z
     .string()
-    .min(8, 'At least 8 characters')
+    .min(10, 'At least 10 characters')
     .regex(/[A-Za-z]/, 'Include a letter')
     .regex(/\d/, 'Include a number'),
 });
@@ -32,7 +32,7 @@ export default function RegisterPage() {
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { name: '', workspaceName: '', email: '', password: '' } });
   const { errors } = form.formState;
   const password = form.watch('password');
-  const strength = [password.length >= 8, /[A-Za-z]/.test(password), /\d/.test(password), password.length >= 12 || /[^A-Za-z0-9]/.test(password)].filter(Boolean).length;
+  const strength = [password.length >= 10, /[A-Za-z]/.test(password), /\d/.test(password), password.length >= 12 || /[^A-Za-z0-9]/.test(password)].filter(Boolean).length;
 
   const onSubmit = form.handleSubmit(async (values) => {
     setError(null);
@@ -69,7 +69,7 @@ export default function RegisterPage() {
         <Field label="Work email" htmlFor="email" error={errors.email?.message}>
           <Input id="email" type="email" autoComplete="email" className="h-10" aria-invalid={!!errors.email} {...form.register('email')} />
         </Field>
-        <Field label="Password" htmlFor="password" error={errors.password?.message} hint="At least 8 characters with a letter and a number.">
+        <Field label="Password" htmlFor="password" error={errors.password?.message} hint="At least 10 characters with a letter and a number.">
           <Input id="password" type="password" autoComplete="new-password" className="h-10" aria-invalid={!!errors.password} {...form.register('password')} />
           <div className="flex gap-1" aria-hidden>
             {[0, 1, 2, 3].map((i) => (

@@ -10,6 +10,14 @@
 - Dashboard "Get ready to sell" checklist and an AI setup guide for business owners (docs/AI_SETUP.md).
 - Redesigned installer and sign-in pages (animated WhatsApp + AI showcase), installer email and AI-key tests, automatic sign-in after install.
 
+### Security
+- Installer now requires a secret token (generated automatically if you do not set one), closing a takeover window on fresh installs.
+- Stronger passwords: 10+ characters and a list of common passwords is refused.
+- Content-Security-Policy, cross-origin and HSTS headers for the web app and API; hardened HTTPS Nginx example with sign-in rate limits.
+- Encrypted database backups (`BACKUP_PASSPHRASE`), Redis password, fail2ban and automatic security updates in the server setup script.
+- Updated nodemailer to 10.x (fixes several advisories) and guarded uploads against a file-type parser hang.
+- New docs/SECURITY.md.
+
 ### Changed
 - Home page menu links scroll to sections without leaving `#section` in the address bar.
 

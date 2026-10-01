@@ -7,7 +7,41 @@ loadEnvConfig(path.resolve(__dirname, '../..'), process.env.NODE_ENV !== 'produc
 
 const apiInternal = process.env.API_INTERNAL_URL || 'http://localhost:4000';
 
+const isDev = process.env.NODE_ENV !== 'production';
+const origin = (url?: string) => {
+  try {
+    return url ? new URL(url).origin : '';
+  } catch {
+    return '';
+  }
+};
+// Where the browser may connect: this site, the API (if on another origin) and live updates over WebSocket.
+const connectSources = ["'self'", origin(process.env.API_URL), origin(process.env.NEXT_PUBLIC_SOCKET_URL), ...(isDev ? ['ws:', 'http://localhost:*'] : ['wss:'])].filter(Boolean);
+
+/**
+ * Content Security Policy: only this site's own scripts may run (plus the inline ones Next.js emits),
+ * nothing can be framed, plugins are off, and forms can only post back to this site.
+ * Images may come from any https address because product photos can be linked from other shops.
+ */
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https: http:",
+  "font-src 'self' data:",
+  `connect-src ${connectSources.join(' ')}`,
+  "media-src 'self' blob: https:",
+  "object-src 'none'",
+  "frame-src 'none'",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join('; ');
+
 const securityHeaders = [
+  { key: 'Content-Security-Policy', value: contentSecurityPolicy },
+  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+  { key: 'X-DNS-Prefetch-Control', value: 'off' },
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
@@ -34,7 +68,7 @@ const nextConfig: NextConfig = {
       {
         source: '/widget/:path*',
         headers: [
-          ...securityHeaders.filter((h) => h.key !== 'X-Frame-Options'),
+          ...securityHeaders.filter((h) => !['X-Frame-Options', 'Content-Security-Policy'].includes(h.key)),
           { key: 'Content-Security-Policy', value: 'frame-ancestors *' },
           { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
         ],

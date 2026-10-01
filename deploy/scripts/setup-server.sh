@@ -21,7 +21,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 echo "==> Packages"
 apt-get update -y
-apt-get install -y ca-certificates curl gnupg git build-essential nginx postgresql postgresql-contrib redis-server certbot python3-certbot-nginx ufw logrotate
+apt-get install -y ca-certificates curl gnupg git build-essential nginx postgresql postgresql-contrib redis-server certbot python3-certbot-nginx ufw logrotate fail2ban unattended-upgrades
 if ! command -v node >/dev/null || [[ "$(node -v | cut -d. -f1 | tr -d v)" -lt 20 ]]; then
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
   apt-get install -y nodejs
@@ -32,6 +32,14 @@ echo "==> Redis (local only, persistent, no eviction for queues)"
 sed -i 's/^#\?\s*supervised .*/supervised systemd/' /etc/redis/redis.conf
 sed -i 's/^#\?\s*maxmemory-policy .*/maxmemory-policy noeviction/' /etc/redis/redis.conf
 grep -q '^bind 127.0.0.1' /etc/redis/redis.conf || sed -i 's/^bind .*/bind 127.0.0.1 ::1/' /etc/redis/redis.conf
+# Redis answers only to this server and only with a password.
+REDIS_PASS="$(openssl rand -hex 24)"
+if grep -q '^requirepass' /etc/redis/redis.conf; then
+  REDIS_PASS=""   # keep the password already set; REDIS_URL must already contain it
+else
+  echo "requirepass ${REDIS_PASS}" >> /etc/redis/redis.conf
+fi
+chmod 640 /etc/redis/redis.conf
 systemctl enable --now redis-server
 systemctl restart redis-server
 
@@ -66,7 +74,7 @@ if [[ ! -f "${BASE}/.env" ]]; then
     -e "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -hex 48)|" \
     -e "s|^JWT_REFRESH_SECRET=.*|JWT_REFRESH_SECRET=$(openssl rand -hex 48)|" \
     -e "s|^ENCRYPTION_KEY=.*|ENCRYPTION_KEY=$(openssl rand -hex 32)|" \
-    -e "s|^INSTALLER_TOKEN=.*|INSTALLER_TOKEN=$(openssl rand -hex 16)|" \
+    -e "s|^INSTALLER_TOKEN=.*|INSTALLER_TOKEN=$(openssl rand -hex 16)|"     ${REDIS_PASS:+-e "s|^REDIS_URL=.*|REDIS_URL=redis://:${REDIS_PASS}@127.0.0.1:6379|"} \
     -e "s|^STORAGE_LOCAL_PATH=.*|STORAGE_LOCAL_PATH=${BASE}/app/storage/uploads|" \
     "${BASE}/.env"
   if [[ "${NEW_DB}" == "1" ]]; then
@@ -74,6 +82,7 @@ if [[ ! -f "${BASE}/.env" ]]; then
   else
     echo "!! Existing database role kept — set DATABASE_URL in ${BASE}/.env manually."
   fi
+  grep -q '^BACKUP_PASSPHRASE=.\+' "${BASE}/.env" || echo "BACKUP_PASSPHRASE=$(openssl rand -hex 24)" >> "${BASE}/.env"
   chown "${DEPLOY_USER}:${DEPLOY_USER}" "${BASE}/.env"
   chmod 600 "${BASE}/.env"
 fi
@@ -85,8 +94,28 @@ ln -sfn "${BASE}/nginx/sellora.conf" /etc/nginx/sites-enabled/sellora
 rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl reload nginx
 
-echo "==> Firewall"
+echo "==> Firewall (only SSH, HTTP and HTTPS are reachable from outside)"
+ufw default deny incoming >/dev/null; ufw default allow outgoing >/dev/null
 ufw allow OpenSSH >/dev/null; ufw allow 'Nginx Full' >/dev/null; ufw --force enable >/dev/null
+
+echo "==> Brute-force protection (fail2ban) and automatic security updates"
+cat > /etc/fail2ban/jail.d/sellora.local <<'JAIL'
+[sshd]
+enabled = true
+maxretry = 5
+findtime = 10m
+bantime = 1h
+
+[nginx-limit-req]
+enabled = true
+logpath = /var/log/nginx/sellora.error.log
+maxretry = 10
+findtime = 10m
+bantime = 1h
+JAIL
+systemctl enable --now fail2ban >/dev/null 2>&1 || true
+systemctl restart fail2ban >/dev/null 2>&1 || true
+dpkg-reconfigure -f noninteractive unattended-upgrades >/dev/null 2>&1 || true
 
 echo "==> PM2 startup and log rotation"
 env PATH="$PATH" pm2 startup systemd -u "${DEPLOY_USER}" --hp "/home/${DEPLOY_USER}" >/dev/null
@@ -104,6 +133,7 @@ Next steps (as ${DEPLOY_USER}):
   sudo -iu ${DEPLOY_USER}
   nano ${BASE}/.env            # SMTP, OpenAI, WhatsApp, etc. (optional)
   cd ${BASE}/app && ./deploy.sh
+IMPORTANT: copy BACKUP_PASSPHRASE from ${BASE}/.env to a password manager NOW. Database backups are encrypted with it and cannot be restored without it.
 Installer token (needed at /install): $(grep -E '^INSTALLER_TOKEN=' ${BASE}/.env | cut -d= -f2)
 Then open the site and create your administrator at /install (or: cd apps/api && npm run db:seed -- --admin you@example.com 'StrongPass1').
 HTTPS: sudo certbot --nginx -d your-domain.com  and set COOKIE_SECURE=true in ${BASE}/.env, then ./deploy.sh

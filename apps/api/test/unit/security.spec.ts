@@ -76,7 +76,7 @@ describe('authentication inputs', () => {
     expect(passwordSchema.safeParse('Passw0rdOK').success).toBe(true);
   });
   it('normalises registration email and rejects malformed input', () => {
-    const ok = registerSchema.parse({ name: 'Ann', email: '  ANN@Example.com ', password: 'Passw0rd1', workspaceName: 'Shop' });
+    const ok = registerSchema.parse({ name: 'Ann', email: '  ANN@Example.com ', password: 'Tr1cky-Banana-77', workspaceName: 'Shop' });
     expect(ok.email).toBe('ann@example.com');
     expect(registerSchema.safeParse({ name: 'A', email: 'not-an-email', password: 'x', workspaceName: '' }).success).toBe(false);
   });

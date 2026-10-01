@@ -43,11 +43,15 @@ function looksLikeText(buf: Buffer): boolean {
   }
 }
 
+/** Magic bytes of Microsoft ASF containers (wma, wmv). A crafted ASF header can hang older file-type releases, and we never accept ASF. */
+const ASF_MAGIC = Buffer.from('3026b2758e66cf11a6d900aa0062ce6c', 'hex');
+
 /**
  * Detects the real MIME type from file contents (not the client-provided
  * header) and enforces an allow-list per upload purpose.
  */
 export async function detectMime(buffer: Buffer, originalName: string): Promise<string | undefined> {
+  if (buffer.subarray(0, 16).equals(ASF_MAGIC)) return undefined;
   const detected = await FileType.fromBuffer(buffer);
   if (detected) {
     // DOCX files are zip containers

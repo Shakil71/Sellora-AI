@@ -1,11 +1,10 @@
 import { z } from 'zod';
+import { passwordProblem } from '@sellora/shared';
 
-export const passwordSchema = z
-  .string()
-  .min(8, 'Password must be at least 8 characters')
-  .max(128, 'Password is too long')
-  .regex(/[A-Za-z]/, 'Password must contain a letter')
-  .regex(/\d/, 'Password must contain a number');
+export const passwordSchema = z.string().superRefine((value, ctx) => {
+  const problem = passwordProblem(value);
+  if (problem) ctx.addIssue({ code: z.ZodIssueCode.custom, message: problem });
+});
 
 const email = z.string().trim().toLowerCase().email('Enter a valid email address').max(254);
 
