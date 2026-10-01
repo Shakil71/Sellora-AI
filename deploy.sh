@@ -26,10 +26,15 @@ trap 'fail "Deployment failed at line ${LINENO}. The previous release keeps runn
 cd "${APP_DIR}"
 
 # 1. Pull latest code ----------------------------------------------------------
-log "Pulling latest code (${BRANCH})"
-git fetch --prune origin
-git checkout "${BRANCH}"
-git pull --ff-only origin "${BRANCH}"
+# Installed from a downloaded ZIP (no .git folder)? Skip this step: the files are already in place.
+if [[ -d "${APP_DIR}/.git" ]]; then
+  log "Pulling latest code (${BRANCH})"
+  git fetch --prune origin
+  git checkout "${BRANCH}"
+  git pull --ff-only origin "${BRANCH}"
+else
+  log "No git repository found: using the files already in ${APP_DIR} (ZIP install)"
+fi
 
 # 2. Validate environment --------------------------------------------------------
 log "Validating environment"
@@ -98,4 +103,4 @@ curl -fsS -o /dev/null "http://127.0.0.1:${WEB_PORT}/" || fail "Web app is not r
 
 # 8. Status ---------------------------------------------------------------------------
 pm2 status
-log "Deployment complete: $(git rev-parse --short HEAD)"
+log "Deployment complete: $(git rev-parse --short HEAD 2>/dev/null || echo 'ZIP install')"

@@ -57,6 +57,7 @@ Open http://localhost:3000. Demo sign-in (only if you seeded demo data): `demo@s
 
 ## Documentation
 
+- **[Installation Guide (Word document, step by step for buyers)](docs/Sellora-AI-Installation-Guide.docx)**: VPS, cloud hosting, cPanel and local machine, including the installer token
 - [Installation](docs/INSTALLATION.md)
 - [Setting up your AI sales agent](docs/AI_SETUP.md) (for business owners)
 - [Deployment on a VPS (no Docker)](docs/DEPLOYMENT.md)

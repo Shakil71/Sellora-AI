@@ -4,12 +4,13 @@
 # Installs Node.js 22, PostgreSQL, Redis, Nginx, PM2 and certbot, creates the
 # database and the /opt/sellora-ai layout.
 #
-#   sudo bash setup-server.sh <git-repo-url> [domain-or-ip] [deploy-user]
+#   sudo bash setup-server.sh <git-repo-url | none> [domain-or-ip] [deploy-user]
+#   Use "none" when you downloaded a ZIP: unzip it into /opt/sellora-ai/app afterwards.
 # Example:
 #   sudo bash setup-server.sh https://github.com/Shakil71/Sellora-AI.git 192.168.197.100 sellora
 # =============================================================================
 set -Eeuo pipefail
-REPO="${1:?Repository URL required}"
+REPO="${1:?Repository URL required, or the word none when you will upload the ZIP yourself}"
 DOMAIN="${2:-_}"
 DEPLOY_USER="${3:-sellora}"
 BASE=/opt/sellora-ai
@@ -57,7 +58,13 @@ fi
 echo "==> Deploy user and directories"
 id -u "${DEPLOY_USER}" >/dev/null 2>&1 || useradd --create-home --shell /bin/bash "${DEPLOY_USER}"
 mkdir -p "${BASE}"/{nginx,backups,logs}
-[[ -d "${BASE}/app/.git" ]] || git clone "${REPO}" "${BASE}/app"
+mkdir -p "${BASE}/app"
+if [[ "${REPO}" == "none" ]]; then
+  echo "Skipping git clone: upload and unzip the product into ${BASE}/app (see the installation guide)."
+  [[ -f "${BASE}/app/.env.example" ]] || { echo "!! ${BASE}/app is empty. Unzip the product into ${BASE}/app first (so that ${BASE}/app/package.json exists), then run this script again."; exit 1; }
+elif [[ ! -d "${BASE}/app/.git" ]]; then
+  git clone "${REPO}" "${BASE}/app"
+fi
 chown -R "${DEPLOY_USER}:${DEPLOY_USER}" "${BASE}"
 chmod 750 "${BASE}" "${BASE}/backups"
 

@@ -13,6 +13,9 @@
 ### Added (continued)
 - **Editable home page** (Platform admin → Edit home page): the platform owner can change the brand name, headline, buttons, feature cards, steps, security and AI points, FAQ, testimonials, footer and search-engine text; add, delete, reorder or hide sections. Plan prices on the home page follow Platform admin → Plan payments.
 
+- Step-by-step **Installation Guide** (docs/Sellora-AI-Installation-Guide.docx) for VPS, cloud, cPanel and local installs, including how to find the installer token.
+- `deploy.sh` and `setup-server.sh` now work from a downloaded ZIP (no git needed).
+
 ### Security
 - Installer now requires a secret token (generated automatically if you do not set one), closing a takeover window on fresh installs.
 - Stronger passwords: 10+ characters and a list of common passwords is refused.
