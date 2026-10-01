@@ -35,7 +35,8 @@ export class BillingService {
     const manual = await this.planPayments.publicInfo(tenantId);
     const lapsed = isLapsed(subscription);
     return {
-      subscription: { ...subscription, lapsed },
+      // Renewal is offered once the paid month is nearly over (computed here so the page stays pure).
+      subscription: { ...subscription, lapsed, renewalDue: lapsed || !subscription.renewalDate || subscription.renewalDate.getTime() - Date.now() < 7 * 86_400_000 },
       manualPayment: manual,
       plan: PLANS[subscription.plan],
       usage: await this.usage.summary(tenantId),

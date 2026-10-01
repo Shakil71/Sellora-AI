@@ -54,6 +54,7 @@ interface Billing {
     renewalDate: string | null;
     provider: string | null;
     lapsed: boolean;
+    renewalDue: boolean;
   };
   manualPayment: {
     enabled: boolean;
@@ -263,7 +264,7 @@ export default function BillingPage() {
                     </li>
                   ))}
                 </ul>
-                {current && !isPlatformAdmin && manage && data.manualPayment.enabled && !data.paymentProvider && p.key !== 'FREE' && !data.manualPayment.pending && (data.subscription.lapsed || !data.subscription.renewalDate || new Date(data.subscription.renewalDate).getTime() - Date.now() < 7 * 86_400_000) ? (
+                {current && !isPlatformAdmin && manage && data.manualPayment.enabled && !data.paymentProvider && p.key !== 'FREE' && !data.manualPayment.pending && data.subscription.renewalDue ? (
                   <Button onClick={() => setPay({ plan: p })}>
                     <CreditCard /> Renew
                   </Button>
