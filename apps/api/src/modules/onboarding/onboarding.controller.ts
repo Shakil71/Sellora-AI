@@ -7,6 +7,8 @@ import { zBody } from '../../common/zod.pipe';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AgentsService, SALES_ASSISTANT_TEMPLATE, AgentInput } from '../ai/agents.service';
+import { decryptJson } from '../../common/utils/crypto.util';
+import { env } from '../../config/env';
 
 export const ONBOARDING_STEPS = ['business', 'workspace', 'whatsapp', 'products', 'ai', 'team', 'complete'] as const;
 
@@ -50,6 +52,35 @@ export class OnboardingService {
     };
   }
 
+  /**
+   * "Get ready to sell" checklist shown on the dashboard until everything is done.
+   * Each item says where to fix it; nothing here changes data.
+   */
+  async launchChecklist(tenantId: string) {
+    const [tenant, documents, agents, products, whatsapp, channels, payments] = await Promise.all([
+      this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { aiConfigEnc: true } }),
+      this.prisma.aIDocument.count({ where: { tenantId } }),
+      this.prisma.aIAgent.findMany({ where: { tenantId, isActive: true }, select: { enabledTools: true } }),
+      this.prisma.product.count({ where: { tenantId } }),
+      this.prisma.whatsAppAccount.count({ where: { tenantId } }),
+      this.prisma.channelConnection.count({ where: { tenantId, status: 'CONNECTED' } }),
+      this.prisma.paymentMethod.count({ where: { tenantId, isActive: true } }),
+    ]);
+    const ownKey = Boolean(decryptJson<{ apiKey?: string }>(tenant.aiConfigEnc)?.apiKey);
+    const items = [
+      { key: 'ai-key', title: 'Connect your AI', description: 'Add an OpenAI key so the agent can reply.', href: '/settings/ai', done: ownKey || Boolean(env.OPENAI_API_KEY) },
+      { key: 'products', title: 'Add your products', description: 'The AI quotes prices and stock from your catalog.', href: '/products/new', done: products > 0 },
+      { key: 'knowledge', title: 'Teach the AI your policies', description: 'Upload delivery, returns and FAQ documents.', href: '/ai/knowledge', done: documents > 0 },
+      { key: 'agent', title: 'Set up your AI agent', description: 'Choose its tone, rules and what it may do.', href: '/ai/agents', done: agents.length > 0 },
+      { key: 'channel', title: 'Connect a channel', description: 'WhatsApp, website chat, Messenger or Instagram.', href: '/integrations', done: whatsapp + channels > 0 },
+      { key: 'payments', title: 'Choose how customers pay', description: 'Add a gateway, bKash, bank transfer or cash on delivery.', href: '/integrations/payments', done: payments > 0 },
+    ];
+    if (agents.length && payments > 0 && !agents.some((a) => a.enabledTools.includes('requestPayment'))) {
+      items.push({ key: 'agent-payments', title: 'Let your AI send payment links', description: 'Turn on the payment tools in your agent settings.', href: '/ai/agents', done: false });
+    }
+    return { items, done: items.filter((i) => i.done).length, total: items.length };
+  }
+
   async progress(actor: Actor, input: z.infer<typeof progressSchema>) {
     await this.prisma.tenant.update({
       where: { id: actor.tenantId },
@@ -89,6 +120,11 @@ export class OnboardingController {
   @Get()
   status(@TenantId() tenantId: string) {
     return this.onboarding.status(tenantId);
+  }
+
+  @Get('launch-checklist')
+  launchChecklist(@TenantId() tenantId: string) {
+    return this.onboarding.launchChecklist(tenantId);
   }
 
   @Post('progress')

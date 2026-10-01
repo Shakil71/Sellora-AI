@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, Bot, DollarSign, MessagesSquare, Package, Percent, ShoppingCart, Target, Users, Clock } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Check, Bot, DollarSign, MessagesSquare, Package, Percent, ShoppingCart, Target, Users, Clock } from 'lucide-react';
 import { api } from '@/lib/api';
 import { money, number, relative, shortTime } from '@/lib/format';
 import { LEAD_STATUS, ORDER_STATUS, CONVERSATION_STATUS, STOCK_STATUS } from '@/lib/status';
@@ -24,6 +24,48 @@ interface Dashboard {
   recentConversations: Array<{ id: string; status: string; handler: string; lastMessageAt: string; lastMessagePreview: string | null; unreadCount: number; customer: { id: string; name: string } }>;
   recentLeads: Array<{ id: string; name: string; status: string; source: string | null; score: number; createdAt: string }>;
   lowStock: Array<{ id: string; available: number; status: string; product: { id: string; name: string; sku: string } }>;
+}
+
+interface Checklist {
+  items: Array<{ key: string; title: string; description: string; href: string; done: boolean }>;
+  done: number;
+  total: number;
+}
+
+/** Steps a new business still has to finish before the AI can sell for it. */
+function LaunchChecklist() {
+  const { data } = useQuery({ queryKey: ['launch-checklist'], queryFn: () => api.get<Checklist>('/onboarding/launch-checklist'), staleTime: 30_000 });
+  if (!data || data.done === data.total) return null;
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle>Get ready to sell</CardTitle>
+        <CardAction>
+          <Badge variant="default">
+            {data.done} of {data.total} done
+          </Badge>
+        </CardAction>
+      </CardHeader>
+      <CardContent className="grid gap-2 pt-3 sm:grid-cols-2 xl:grid-cols-3">
+        {data.items.map((i) => (
+          <Link
+            key={i.key}
+            href={i.href}
+            className="flex items-start gap-3 rounded-lg border p-3 transition hover:border-primary/40 hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            <span className={i.done ? 'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-success text-success-foreground' : 'mt-0.5 size-5 shrink-0 rounded-full border-2'}>
+              {i.done && <Check className="size-3" aria-hidden />}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className={i.done ? 'block text-sm font-medium text-muted-foreground line-through' : 'block text-sm font-medium'}>{i.title}</span>
+              <span className="block text-xs text-muted-foreground">{i.description}</span>
+            </span>
+            {!i.done && <ArrowRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />}
+          </Link>
+        ))}
+      </CardContent>
+    </Card>
+  );
 }
 
 function greeting() {
@@ -61,6 +103,7 @@ export default function DashboardPage() {
           </>
         }
       />
+      {can('settings.update') && <LaunchChecklist />}
       {error ? (
         <ErrorState error={error} onRetry={() => refetch()} />
       ) : (

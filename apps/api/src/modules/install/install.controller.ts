@@ -17,6 +17,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { randomBytes } from 'crypto';
 import IORedis from 'ioredis';
+import * as nodemailer from 'nodemailer';
 import { z } from 'zod';
 import { Public, SkipCsrf } from '../../common/decorators';
 import { zBody } from '../../common/zod.pipe';
@@ -59,6 +60,13 @@ const envSchema = z.object({
   mailFrom: z.string().max(200).optional(),
   openaiApiKey: z.string().max(300).optional(),
 });
+const smtpSchema = z.object({
+  smtpHost: z.string().trim().min(2).max(200),
+  smtpPort: z.coerce.number().int().positive().max(65535),
+  smtpUser: z.string().max(200).optional(),
+  smtpPassword: z.string().max(200).optional(),
+});
+const openAiSchema = z.object({ openaiApiKey: z.string().trim().min(10).max(300) });
 const adminSchema = z.object({
   name: z.string().trim().min(2).max(100),
   email: z.string().trim().toLowerCase().email().max(254),
@@ -176,6 +184,9 @@ export class InstallService {
         apiUrl: env.API_URL,
         smtpConfigured: Boolean(env.SMTP_HOST),
         aiConfigured: Boolean(env.OPENAI_API_KEY),
+        cookieSecure: env.COOKIE_SECURE,
+        trustProxy: env.TRUST_PROXY,
+        envFile: this.envPath(),
       },
     };
   }
@@ -225,6 +236,41 @@ export class InstallService {
     }
   }
 
+  /** Connects to the mail server and logs in, without sending anything. */
+  async testSmtp(input: z.infer<typeof smtpSchema>) {
+    const transport = nodemailer.createTransport({
+      host: input.smtpHost,
+      port: input.smtpPort,
+      secure: input.smtpPort === 465,
+      auth: input.smtpUser ? { user: input.smtpUser, pass: input.smtpPassword } : undefined,
+      connectionTimeout: 8000,
+      greetingTimeout: 8000,
+      socketTimeout: 10_000,
+    });
+    try {
+      await transport.verify();
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message.slice(0, 300) };
+    } finally {
+      transport.close();
+    }
+  }
+
+  /** Asks the AI provider for its model list: the cheapest way to check that a key works. */
+  async testOpenAi(apiKey: string) {
+    try {
+      const res = await fetch(`${env.OPENAI_BASE_URL.replace(/\/$/, '')}/models`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (res.ok) return { ok: true };
+      return { ok: false, error: res.status === 401 ? 'The provider rejected this key.' : `The provider answered with status ${res.status}.` };
+    } catch {
+      return { ok: false, error: 'Could not reach the AI provider from this server.' };
+    }
+  }
+
   /**
    * Merges values into .env (secrets are generated when missing). A restart is
    * needed afterwards. On a server whose database and Redis already work, the
@@ -244,6 +290,7 @@ export class InstallService {
       CORS_ORIGINS: locked ? undefined : input.appUrl,
       SMTP_HOST: input.smtpHost,
       SMTP_PORT: input.smtpPort ? String(input.smtpPort) : undefined,
+      SMTP_SECURE: input.smtpHost && input.smtpPort ? String(input.smtpPort === 465) : undefined,
       SMTP_USER: input.smtpUser,
       SMTP_PASSWORD: input.smtpPassword,
       MAIL_FROM: input.mailFrom,
@@ -381,6 +428,26 @@ export class InstallController {
   ) {
     await this.install.assertNotInstalled(token);
     return this.install.testRedis(body.redisUrl);
+  }
+
+  @Post('test-smtp')
+  @HttpCode(200)
+  async testSmtp(
+    @Headers('x-installer-token') token: string | undefined,
+    @Body(zBody(smtpSchema)) body: z.infer<typeof smtpSchema>,
+  ) {
+    await this.install.assertNotInstalled(token);
+    return this.install.testSmtp(body);
+  }
+
+  @Post('test-openai')
+  @HttpCode(200)
+  async testOpenAi(
+    @Headers('x-installer-token') token: string | undefined,
+    @Body(zBody(openAiSchema)) body: z.infer<typeof openAiSchema>,
+  ) {
+    await this.install.assertNotInstalled(token);
+    return this.install.testOpenAi(body.openaiApiKey);
   }
 
   @Post('environment')

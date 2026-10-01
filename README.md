@@ -57,6 +57,7 @@ Open http://localhost:3000. Demo sign-in (only if you seeded demo data): `demo@s
 ## Documentation
 
 - [Installation](docs/INSTALLATION.md)
+- [Setting up your AI sales agent](docs/AI_SETUP.md) (for business owners)
 - [Deployment on a VPS (no Docker)](docs/DEPLOYMENT.md)
 - [Environment variables](docs/ENVIRONMENT.md)
 - [Product documentation](docs/DOCUMENTATION.md)
