@@ -7,6 +7,7 @@ import { AuditService } from '../audit/audit.service';
 import { ProductsService } from '../commerce/products.service';
 import { UploadsService } from '../storage/uploads.service';
 import { assertPublicUrl } from '../ai/text-extraction';
+import { parseProductFile } from './file-readers';
 import { AppException, ValidationError } from '../../common/errors';
 import type { Actor } from '../../common/auth-context';
 import {
@@ -266,6 +267,11 @@ export class ProductImportService {
 
   // ------------------------------------------------------------------ preview
 
+  /** Reads an uploaded Excel, CSV, Word, PDF, JSON, XML or text file. */
+  async previewFile(actor: Actor, file: { originalname: string; buffer: Buffer }) {
+    return this.finishPreview(actor, await parseProductFile(file.originalname, file.buffer));
+  }
+
   async preview(actor: Actor, source: ImportSource) {
     let catalog: ParsedCatalog;
     switch (source.source) {
@@ -285,6 +291,10 @@ export class ProductImportService {
         break;
       }
     }
+    return this.finishPreview(actor, catalog);
+  }
+
+  private async finishPreview(actor: Actor, catalog: ParsedCatalog) {
     const warnings = [...catalog.warnings];
     let products = catalog.products;
     if (products.length > MAX_PRODUCTS) {

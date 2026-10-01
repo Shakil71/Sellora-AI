@@ -35,6 +35,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/primitives';
 import { BrowserFrame, PhoneFrame, ThemedShot } from '@/components/marketing/frames';
 import { ProductTour } from '@/components/marketing/product-tour';
+import { AnchorLink, ScrollToAnchor } from '@/components/marketing/anchor-link';
 
 export const metadata: Metadata = {
   title: 'Sellora AI — Turn WhatsApp Conversations Into Revenue',
@@ -304,7 +305,7 @@ function Hero() {
       />
       <div className="mx-auto max-w-6xl px-4 pt-14 sm:px-6 sm:pt-20 lg:pt-24">
         <div className="mx-auto max-w-3xl text-center">
-          <Link
+          <AnchorLink
             href="/#product"
             className="group mx-auto inline-flex max-w-full items-center gap-2 rounded-full border bg-card/80 py-1 pr-3 pl-1 text-xs font-medium shadow-xs backdrop-blur transition hover:border-primary/40 sm:text-sm"
           >
@@ -316,7 +317,7 @@ function Hero() {
               className="size-3.5 shrink-0 transition group-hover:translate-x-0.5"
               aria-hidden
             />
-          </Link>
+          </AnchorLink>
           <h1 className="mt-6 text-4xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-6xl lg:text-7xl">
             Turn WhatsApp conversations into{' '}
             <span className="bg-gradient-to-r from-primary via-[color-mix(in_oklch,var(--primary)_60%,var(--ai))] to-ai bg-clip-text text-transparent">
@@ -335,7 +336,7 @@ function Hero() {
               </Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <Link href="/#product">See the product</Link>
+              <AnchorLink href="/#product">See the product</AnchorLink>
             </Button>
           </div>
           <ul className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
@@ -893,6 +894,7 @@ export default function LandingPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <ScrollToAnchor />
       <Hero />
       <Foundations />
       <ConversationToOrder />

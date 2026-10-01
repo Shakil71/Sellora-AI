@@ -24,7 +24,7 @@ export interface ImportedProduct {
 }
 
 export interface ParsedCatalog {
-  platform: 'shopify' | 'woocommerce' | 'structured-data' | 'feed' | 'csv';
+  platform: 'shopify' | 'woocommerce' | 'structured-data' | 'feed' | 'csv' | 'excel' | 'document';
   currency: string | null;
   products: ImportedProduct[];
   warnings: string[];
@@ -452,9 +452,9 @@ export function parseJsonLdProducts(html: string, pageUrl: string): { products: 
 // ---------------------------------------------------------------------------
 
 const FIELDS = {
-  name: ['name', 'title', 'product_name', 'productname', 'item_name', 'product_title', 'label'],
+  name: ['name', 'title', 'product_name', 'productname', 'item_name', 'product_title', 'product', 'item', 'article', 'label'],
   sku: ['sku', 'item_sku', 'product_sku', 'article_number', 'mpn', 'code', 'product_code', 'item_code', 'id', 'product_id', 'item_id'],
-  price: ['regular_price', 'compare_at_price', 'list_price', 'mrp', 'price', 'unit_price', 'amount', 'selling_price'],
+  price: ['regular_price', 'compare_at_price', 'list_price', 'mrp', 'price', 'unit_price', 'rate', 'amount', 'selling_price'],
   sale: ['sale_price', 'special_price', 'discount_price', 'offer_price'],
   description: ['description', 'body_html', 'body', 'details', 'long_description', 'content', 'short_description', 'summary'],
   image: ['image', 'images', 'image_url', 'image_link', 'imageurl', 'img', 'photo', 'picture', 'thumbnail', 'main_image', 'featured_image', 'additional_image_link', 'image_urls'],

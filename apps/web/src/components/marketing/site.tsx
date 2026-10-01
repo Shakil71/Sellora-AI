@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Logo } from '@/components/brand/logo';
 import { Button } from '@/components/ui/button';
 import { MobileNav, ThemeToggle } from './header-controls';
+import { AnchorLink } from './anchor-link';
 
 const NAV = [
   { href: '/#product', label: 'Product' },
@@ -23,13 +24,13 @@ export function SiteHeader() {
           className="hidden items-center gap-1 text-sm text-muted-foreground lg:flex xl:gap-2"
         >
           {NAV.map((n) => (
-            <Link
+            <AnchorLink
               key={n.href}
               href={n.href}
               className="rounded-md px-3 py-1.5 font-medium transition-colors hover:bg-muted hover:text-foreground"
             >
               {n.label}
-            </Link>
+            </AnchorLink>
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-1.5 justify-self-end sm:gap-2 lg:ml-0">
@@ -62,9 +63,9 @@ export function SiteFooter() {
           <ul className="space-y-2 text-sm text-muted-foreground">
             {NAV.map((n) => (
               <li key={n.href}>
-                <Link href={n.href} className="hover:text-foreground">
+                <AnchorLink href={n.href} className="hover:text-foreground">
                   {n.label}
-                </Link>
+                </AnchorLink>
               </li>
             ))}
           </ul>

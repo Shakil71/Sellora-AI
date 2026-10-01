@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { Menu, Moon, Sun, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AnchorLink } from './anchor-link';
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -60,14 +61,14 @@ export function MobileNav({ items }: { items: Array<{ href: string; label: strin
           >
             <nav aria-label="Mobile" className="flex flex-col gap-1 px-4 py-6">
               {items.map((n) => (
-                <Link
+                <AnchorLink
                   key={n.href}
                   href={n.href}
                   onClick={() => setOpen(false)}
                   className="rounded-lg px-3 py-3 text-lg font-medium hover:bg-muted"
                 >
                   {n.label}
-                </Link>
+                </AnchorLink>
               ))}
               <div className="mt-6 grid gap-3">
                 <Button size="lg" variant="outline" asChild>

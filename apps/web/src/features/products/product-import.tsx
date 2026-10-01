@@ -17,6 +17,7 @@ import {
   PackageCheck,
   Search,
   Store,
+  UploadCloud,
   type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -25,12 +26,12 @@ import { money } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { useSession } from '@/components/session';
 import { Field, FormGrid } from '@/components/shared/form';
-import { Badge, Card, CardContent, Checkbox, Input, Progress, Switch, Textarea } from '@/components/ui/primitives';
+import { Badge, Card, CardContent, Checkbox, Input, Progress, Switch } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/overlays';
 import { ProductThumb } from './product-thumb';
 
-type SourceKind = 'website' | 'woocommerce' | 'feed' | 'csv';
+type SourceKind = 'website' | 'woocommerce' | 'feed' | 'file';
 
 interface PreviewProduct {
   key: string;
@@ -75,7 +76,12 @@ const SOURCES: Array<{ key: SourceKind; icon: LucideIcon; title: string; text: s
   },
   { key: 'woocommerce', icon: Store, title: 'WooCommerce API keys', text: 'Import everything from WooCommerce, including stock quantities, with read-only API keys.' },
   { key: 'feed', icon: Database, title: 'Product feed or API', text: 'Any web address that returns your products as JSON, XML (Google Merchant) or CSV, with an optional API key.' },
-  { key: 'csv', icon: FileSpreadsheet, title: 'CSV file', text: 'Upload a spreadsheet exported as CSV from any system. Columns are matched by name.' },
+  {
+    key: 'file',
+    icon: FileSpreadsheet,
+    title: 'Upload a file',
+    text: 'Excel (.xlsx), CSV, Word (.docx), PDF, JSON or XML. Columns are matched by name, and tables or price lines inside documents are understood.',
+  },
 ];
 
 const SAMPLE_CSV = 'name,sku,price,sale_price,category,description,image_url,stock,brand,color,size,shape\nUrban Runner,UR-BLK-42,59.00,49.00,Shoes,Light running shoe,https://example.com/shoe.jpg,12,Acme,Black,42,\nCeramic Vase,VASE-1,30.00,,Home,Hand made vase,https://example.com/vase.jpg,5,Craft,White,,Round\n';
@@ -124,8 +130,9 @@ function Stat({ label, value, tone }: { label: string; value: React.ReactNode; t
 export function ProductImporter() {
   const { currency } = useSession();
   const [kind, setKind] = React.useState<SourceKind | null>(null);
-  const [form, setForm] = React.useState({ url: '', consumerKey: '', consumerSecret: '', headerName: '', headerValue: '', csv: '' });
-  const [fileName, setFileName] = React.useState('');
+  const [form, setForm] = React.useState({ url: '', consumerKey: '', consumerSecret: '', headerName: '', headerValue: '' });
+  const [file, setFile] = React.useState<File | null>(null);
+  const [dragging, setDragging] = React.useState(false);
   const [preview, setPreview] = React.useState<Preview | null>(null);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [filter, setFilter] = React.useState('');
@@ -139,11 +146,18 @@ export function ProductImporter() {
     if (kind === 'website') return { source: 'website', url: form.url.trim() };
     if (kind === 'woocommerce') return { source: 'woocommerce', url: form.url.trim(), consumerKey: form.consumerKey.trim(), consumerSecret: form.consumerSecret.trim() };
     if (kind === 'feed') return { source: 'feed', url: form.url.trim(), ...(form.headerName && form.headerValue ? { headerName: form.headerName.trim(), headerValue: form.headerValue.trim() } : {}) };
-    return { source: 'csv', csv: form.csv };
+    return { source: 'website', url: form.url.trim() };
   };
 
   const load = useMutation({
-    mutationFn: () => api.post<Preview>('/products/import/preview', body()),
+    mutationFn: () => {
+      if (kind === 'file') {
+        const data = new FormData();
+        data.append('file', file!);
+        return api.upload<Preview>('/products/import/preview-file', data);
+      }
+      return api.post<Preview>('/products/import/preview', body());
+    },
     onSuccess: (p) => {
       setPreview(p);
       setSelected(new Set(p.products.filter((x) => !x.exists).map((x) => x.key)));
@@ -154,9 +168,21 @@ export function ProductImporter() {
     },
   });
 
+  const pickFile = (f: File) => {
+    if (f.size > 10 * 1024 * 1024) {
+      toast.error('That file is larger than 10 MB. Split it into smaller files.');
+      return;
+    }
+    if (!/\.(xlsx|xlsm|csv|tsv|txt|json|xml|docx|pdf)$/i.test(f.name)) {
+      toast.error(/\.(xls|doc)$/i.test(f.name) ? 'Please save old .xls/.doc files as .xlsx/.docx first.' : 'This file type is not supported. Use Excel, CSV, Word, PDF, JSON or XML.');
+      return;
+    }
+    setFile(f);
+  };
+
   const canLoad =
-    kind === 'csv'
-      ? form.csv.trim().length > 10
+    kind === 'file'
+      ? file !== null
       : kind === 'woocommerce'
         ? /^https?:\/\//i.test(form.url.trim()) && form.consumerKey.trim().length >= 8 && form.consumerSecret.trim().length >= 8
         : /^https?:\/\//i.test(form.url.trim());
@@ -532,29 +558,64 @@ export function ProductImporter() {
           </>
         )}
 
-        {kind === 'csv' && (
+        {kind === 'file' && (
           <>
-            <Field label="CSV file" htmlFor="c-file" hint="The first row must be column names. Needs at least a name and a price column.">
-              <Input
+            <label
+              htmlFor="c-file"
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragging(true);
+              }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragging(false);
+                const f = e.dataTransfer.files?.[0];
+                if (f) pickFile(f);
+              }}
+              className={cn(
+                'flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed p-8 text-center transition hover:border-primary/60 hover:bg-primary/5',
+                dragging && 'border-primary bg-primary/5',
+                file && 'border-success/50 bg-success/5',
+              )}
+            >
+              <span className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                {file ? <CheckCircle2 className="size-6 text-success" aria-hidden /> : <UploadCloud className="size-6" aria-hidden />}
+              </span>
+              {file ? (
+                <>
+                  <span className="font-medium">{file.name}</span>
+                  <span className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(0)} KB · click to choose a different file</span>
+                </>
+              ) : (
+                <>
+                  <span className="font-medium">Drop your file here, or click to choose</span>
+                  <span className="text-xs text-muted-foreground">Excel, CSV, Word, PDF, JSON, XML or text · up to 10 MB</span>
+                </>
+              )}
+              <input
                 id="c-file"
                 type="file"
-                accept=".csv,text/csv,text/plain"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  if (file.size > 5 * 1024 * 1024) {
-                    toast.error('That file is larger than 5 MB. Split it into smaller files.');
-                    return;
-                  }
-                  setFileName(file.name);
-                  setForm({ ...form, csv: await file.text() });
+                className="sr-only"
+                accept=".xlsx,.xlsm,.csv,.tsv,.txt,.json,.xml,.docx,.pdf"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) pickFile(f);
                 }}
               />
-            </Field>
-            {fileName && <p className="text-xs text-success">Loaded {fileName}</p>}
-            <Field label="Or paste the CSV text" htmlFor="c-text">
-              <Textarea id="c-text" rows={5} value={form.csv} onChange={(e) => setForm({ ...form, csv: e.target.value })} className="font-mono text-xs" />
-            </Field>
+            </label>
+            <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+              {[
+                ['Excel or CSV', 'First row = column names (Name, SKU, Price, Image, Category…). Any extra column becomes a product detail.'],
+                ['Word', 'Put products in a table with a header row, or one product per line with its price.'],
+                ['PDF', 'Works when the text can be selected. Lines like “Blue Mug  12.50” or a table with Name and Price.'],
+                ['Photos', 'Use web links in an Image column. Pictures pasted inside Excel or Word cannot be read.'],
+              ].map(([t, d]) => (
+                <p key={t} className="rounded-lg border bg-muted/30 p-2.5">
+                  <strong className="text-foreground">{t}.</strong> {d}
+                </p>
+              ))}
+            </div>
             <Button
               variant="outline"
               size="sm"
@@ -567,7 +628,7 @@ export function ProductImporter() {
                 URL.revokeObjectURL(url);
               }}
             >
-              Download a sample CSV
+              Download a sample file (opens in Excel)
             </Button>
           </>
         )}
