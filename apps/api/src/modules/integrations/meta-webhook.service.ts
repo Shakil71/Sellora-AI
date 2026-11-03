@@ -125,6 +125,12 @@ export class MetaWebhookService {
     return Boolean(found);
   }
 
+  /**
+   * Verifies X-Hub-Signature-256. A connection's own app secret only vouches
+   * for that connection's entries; the server-wide secrets vouch for every
+   * entry. Entries the signing secret does not cover are dropped before
+   * storage, so one workspace can never inject messages into another.
+   */
   async receive(
     rawBody: Buffer | undefined,
     signatureHeader: string | undefined,
@@ -136,6 +142,7 @@ export class MetaWebhookService {
     } catch {
       return { ok: false, reason: 'invalid json' };
     }
+    if (!payload || typeof payload !== 'object') return { ok: false, reason: 'invalid json' };
     const type = TYPE_BY_OBJECT[payload.object ?? ''];
     if (!type) return { ok: true, eventId: null }; // not a messaging object: acknowledge and ignore
     const ids = [
@@ -145,39 +152,79 @@ export class MetaWebhookService {
       ? await this.prisma.channelConnection.findMany({ where: { type, externalId: { in: ids } } })
       : [];
 
-    const secrets = new Set<string>();
-    for (const c of connections) {
-      if (!c.appSecretEnc) continue;
+    const connectionSecrets = connections.map((c) => {
+      if (!c.appSecretEnc) return undefined;
       try {
-        secrets.add(decryptSecret(c.appSecretEnc));
+        return decryptSecret(c.appSecretEnc);
       } catch {
-        /* undecryptable secret */
+        return undefined; // undecryptable secret
       }
-    }
-    if (env.META_APP_SECRET) secrets.add(env.META_APP_SECRET);
-    if (env.WHATSAPP_APP_SECRET) secrets.add(env.WHATSAPP_APP_SECRET); // same Meta app is common
-    if (!secrets.size) return { ok: false, reason: 'no app secret configured' };
+    });
+    // The WhatsApp app secret is accepted too: one Meta app for every channel is common.
+    const platformSecrets = [env.META_APP_SECRET, env.WHATSAPP_APP_SECRET].filter(
+      (s): s is string => Boolean(s),
+    );
+    if (!platformSecrets.length && !connectionSecrets.some(Boolean))
+      return { ok: false, reason: 'no app secret configured' };
     const provided = signatureHeader?.startsWith('sha256=') ? signatureHeader.slice(7) : undefined;
     if (!provided) return { ok: false, reason: 'missing signature' };
-    if (![...secrets].some((s) => safeEqual(hmacSha256Hex(s, rawBody), provided)))
-      return { ok: false, reason: 'invalid signature' };
+    const signedBy = (secret: string | undefined) =>
+      Boolean(secret) && safeEqual(hmacSha256Hex(secret!, rawBody), provided);
 
-    const event = await this.prisma.webhookEvent.create({
-      data: {
-        tenantId: connections[0]?.tenantId ?? null,
-        provider: type === ChannelType.INSTAGRAM ? 'instagram' : 'messenger',
-        eventType: rawBody.includes('"message"')
-          ? 'messages'
-          : rawBody.includes('"delivery"') || rawBody.includes('"read"')
-            ? 'statuses'
-            : 'other',
-        payload: payload as unknown as Prisma.InputJsonValue,
-        signatureValid: true,
-        status: connections.length ? WebhookEventStatus.RECEIVED : WebhookEventStatus.IGNORED,
-      },
-    });
-    if (connections.length) await this.queues.processMetaWebhook(event.id);
-    return { ok: true, eventId: event.id };
+    const platformSigned = platformSecrets.some(signedBy);
+    const trusted = connections.filter((_c, i) => platformSigned || signedBy(connectionSecrets[i]));
+    if (!platformSigned && !trusted.length) return { ok: false, reason: 'invalid signature' };
+
+    const provider = type === ChannelType.INSTAGRAM ? 'instagram' : 'messenger';
+    const dropped = ids.filter((id) => !trusted.some((c) => c.externalId === id));
+    if (dropped.length && !platformSigned)
+      this.logger.warn(
+        `Dropped ${type} webhook entries not covered by the signing secret: ${dropped.join(', ')}`,
+      );
+    if (!trusted.length) {
+      // Authentic (server-wide secret) but for no connected page: keep it for the platform log only.
+      const event = await this.prisma.webhookEvent.create({
+        data: {
+          tenantId: null,
+          provider,
+          eventType: 'other',
+          payload: payload as unknown as Prisma.InputJsonValue,
+          signatureValid: true,
+          status: WebhookEventStatus.IGNORED,
+        },
+      });
+      return { ok: true, eventId: event.id };
+    }
+
+    // One event per workspace, holding only that workspace's entries.
+    const eventIds: string[] = [];
+    for (const tenantId of [...new Set(trusted.map((c) => c.tenantId))]) {
+      const tenantIds = new Set(
+        trusted.filter((c) => c.tenantId === tenantId).map((c) => c.externalId),
+      );
+      const scoped: MetaWebhook = {
+        ...payload,
+        entry: (payload.entry ?? []).filter((e) => e.id && tenantIds.has(e.id)),
+      };
+      const scopedBody = JSON.stringify(scoped);
+      const event = await this.prisma.webhookEvent.create({
+        data: {
+          tenantId,
+          provider,
+          eventType: scopedBody.includes('"message"')
+            ? 'messages'
+            : scopedBody.includes('"delivery"') || scopedBody.includes('"read"')
+              ? 'statuses'
+              : 'other',
+          payload: scoped as unknown as Prisma.InputJsonValue,
+          signatureValid: true,
+          status: WebhookEventStatus.RECEIVED,
+        },
+      });
+      await this.queues.processMetaWebhook(event.id);
+      eventIds.push(event.id);
+    }
+    return { ok: true, eventId: eventIds[0]! };
   }
 
   /** Worker: turns stored events into conversations and delivery receipts. */

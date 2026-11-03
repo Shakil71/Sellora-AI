@@ -17,7 +17,7 @@ function envValue(key, fallback) {
   try {
     const text = require('fs').readFileSync(path.join(ROOT, '.env'), 'utf8');
     const match = text.match(new RegExp('^' + key + '=(.*)$', 'm'));
-    if (match) return match[1].trim().replace(/^["']|["']$/g, '') || fallback;
+    if (match) return match[1].trim().replace(/^(["'`])(.*)\1$/, '$2') || fallback;
   } catch {
     /* no .env: use the fallback */
   }

@@ -14,7 +14,7 @@ import { CustomersService } from '../crm/customers.service';
 import { InventoryService, StockAlert, StockLine } from './inventory.service';
 import { effectivePrice } from './products.service';
 import { paginate, toPaginated } from '../../common/pagination';
-import { ensureFound, ValidationError } from '../../common/errors';
+import { ConflictError, ensureFound, ValidationError } from '../../common/errors';
 import type { Actor } from '../../common/auth-context';
 
 type Tx = Prisma.TransactionClient;
@@ -333,6 +333,10 @@ export class OrdersService {
     const alerts: StockAlert[] = [];
 
     await this.prisma.$transaction(async (tx) => {
+      // Claim the transition first: a concurrent change makes this match nothing and
+      // rolls back, so stock is never released or restocked twice.
+      const claimed = await tx.order.updateMany({ where: { id, tenantId: actor.tenantId, status: order.status }, data: { status: input.status } });
+      if (!claimed.count) throw new ConflictError('This order was just changed by someone else. Refresh and try again.');
       const data: Prisma.OrderUpdateInput = { status: input.status };
       if (input.status === OrderStatus.CONFIRMED) data.confirmedAt = new Date();
       if (FULFILLED.includes(input.status) && order.inventoryReserved && !order.inventoryCommitted && lines.length) {

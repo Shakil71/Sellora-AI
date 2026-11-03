@@ -34,7 +34,7 @@ export class QueueService {
   ) {}
 
   all(): Queue[] {
-    return [this.whatsapp, this.ai, this.notifications, this.documents, this.automation, this.analytics, this.deadLetter];
+    return [this.whatsapp, this.ai, this.notifications, this.documents, this.automation, this.analytics, this.integrations, this.deadLetter];
   }
 
   byName(name: string): Queue | undefined {

@@ -52,6 +52,10 @@ The setup script `deploy/scripts/setup-server.sh` does most of this for you. If 
 - `uuid` (through `exceljs`): the bounds check issue only affects generating v3/v5/v6 ids into a caller-supplied buffer, which ExcelJS does not do.
 - `file-type`: a malformed Windows media (ASF) header can hang it. Sellora refuses those files before calling the library.
 
+## Known limitations (planned follow-ups)
+
+- **DNS rebinding on outbound URLs.** Sellora refuses URLs that resolve to private or internal addresses (AI base URL, knowledge base pages, product import, outgoing webhooks). The address is checked, then the request resolves DNS again, so a hostname whose DNS answer changes between the two (TTL 0) can still reach an internal address. Mitigation on the server: block outbound traffic from the app user to 169.254.169.254 and to internal services you do not want reachable (for example with `ufw` or `iptables` owner rules). The planned fix pins the checked address to the connection.
+
 ## Reporting a vulnerability
 
 Email the address in your product listing with the steps to reproduce. Please do not test against other people's installations or publish details before a fix is available. Fixes are announced in CHANGELOG.md.

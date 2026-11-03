@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Security
+- **Platform AI key could leak to a workspace-chosen URL.** A workspace that set a custom AI base URL without its own key had the platform `OPENAI_API_KEY` sent to that URL. The platform key now only goes to `OPENAI_BASE_URL`; a custom URL is used only with the workspace's own key, must be a public address, and may not redirect.
+- **Cross-workspace message injection through webhooks.** A WhatsApp, Messenger or Instagram webhook signed with one workspace's app secret could carry entries for another workspace's number or page. A workspace's secret now only vouches for its own numbers and pages; other entries are dropped. Batches for several workspaces are stored as one event per workspace, so no workspace's webhook log shows another's messages.
+- The private-address check now also refuses IPv4 addresses embedded in IPv6 (`::ffff:…`, NAT64).
+- One-time links (email verification, password reset, invitations) cannot be used twice by simultaneous requests.
+
+### Fixed
+- The installer no longer corrupts `.env` values containing `$`, quotes, backslashes or line breaks; the deploy, backup and restore scripts read every quoting style dotenv accepts.
+- Two simultaneous status changes on the same order can no longer release or restock inventory twice.
+- The platform admin queue view now includes the integrations queue (Messenger/Instagram webhooks, outgoing webhooks).
+- Home page structured data is escaped.
+
 ## 1.1.0
 
 ### Added

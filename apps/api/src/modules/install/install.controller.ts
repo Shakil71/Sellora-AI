@@ -75,9 +75,23 @@ const adminSchema = z.object({
   workspaceName: z.string().trim().min(2).max(100),
 });
 
-/** Quotes a value for a .env file. */
-function envValue(v: string) {
-  return /[\s#"'$]/.test(v) ? `"${v.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"` : v;
+/**
+ * Quotes a value for a .env file so dotenv reads it back unchanged. dotenv has
+ * no escapes except `\n`/`\r` inside double quotes, so pick a quote character
+ * the value does not contain. A value can never add lines to the file.
+ */
+export function envValue(v: string) {
+  const unsupported = () =>
+    new AppException('INVALID_VALUE', 'This value contains characters that cannot be saved in the .env file. Edit .env on the server instead.');
+  // U+2028/U+2029 count as line breaks in JavaScript regexes, so dotenv would split on them.
+  if ([0x2028, 0x2029].some((c) => v.includes(String.fromCharCode(c)))) throw unsupported();
+  if (!/[\s#"'`$\\]/.test(v)) return v;
+  // Double quotes first: the deploy and backup scripts have always read those.
+  if (!v.includes('"') && !/\\[nr]/.test(v)) return `"${v.replace(/\r/g, '\\r').replace(/\n/g, '\\n')}"`;
+  const oneLine = !/[\r\n]/.test(v);
+  if (oneLine && !v.includes("'")) return `'${v}'`;
+  if (oneLine && !v.includes('`')) return `\`${v}\``;
+  throw unsupported();
 }
 
 /**
@@ -353,8 +367,10 @@ export class InstallService implements OnModuleInit {
     for (const [key, value] of Object.entries(updates)) {
       if (value === undefined || value === '') continue;
       const line = `${key}=${envValue(value)}`;
-      const re = new RegExp(`^${key}=.*$`, 'm');
-      content = re.test(content) ? content.replace(re, line) : `${content.trimEnd()}\n${line}\n`;
+      // Up to the next line feed only: `.` and `$` would also stop at a stray CR.
+      const re = new RegExp(`^${key}=[^\\n]*`, 'm');
+      // A function replacer: `$&` or `$'` in a value (e.g. a password) must stay literal.
+      content = re.test(content) ? content.replace(re, () => line) : `${content.trimEnd()}\n${line}\n`;
       written.push(key);
     }
     fs.writeFileSync(file, content.endsWith('\n') ? content : `${content}\n`, { mode: 0o600 });

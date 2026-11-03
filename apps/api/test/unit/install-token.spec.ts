@@ -1,4 +1,5 @@
-import { InstallService } from '../../src/modules/install/install.controller';
+import * as dotenv from 'dotenv';
+import { envValue, InstallService } from '../../src/modules/install/install.controller';
 
 function make() {
   const svc = new InstallService({} as never, {} as never, {} as never, {} as never, {} as never, {} as never);
@@ -24,6 +25,29 @@ describe('installer token', () => {
     const svc = make();
     jest.spyOn(svc, 'isInstalled').mockResolvedValue(true);
     await expect(svc.assertNotInstalled('a1b2c3d4e5f6a7b8')).rejects.toThrow('already installed');
+  });
+});
+
+describe('.env values written by the installer', () => {
+  it('read back unchanged through dotenv', () => {
+    const values = ['plain', 'with space', "it's", 'a"b\\c', 'p$&w$\'d#x', 'tab\there', 'two\nlines', 'it\'s `both`', 'a\rb', 'C:\\new folder', 'x\r\ny'];
+    for (const v of values) {
+      expect(dotenv.parse(`KEY=${envValue(v)}\n`).KEY).toBe(v);
+    }
+  });
+
+  it('never adds lines to the file', () => {
+    expect(envValue('a\nJWT_SECRET=evil')).not.toMatch(/[\r\n]/);
+    expect(envValue('a\rJWT_SECRET=evil')).not.toMatch(/[\r\n]/);
+    expect(() => envValue(`a${String.fromCharCode(0x2028)}b`)).toThrow('cannot be saved');
+  });
+
+  it('keeps double quotes for ordinary values the shell scripts read', () => {
+    expect(envValue('postgresql://u:pa$s word@db/x')).toBe('"postgresql://u:pa$s word@db/x"');
+  });
+
+  it('refuses values dotenv cannot represent', () => {
+    expect(() => envValue('it\'s `x`\n"y"')).toThrow('cannot be saved');
   });
 });
 

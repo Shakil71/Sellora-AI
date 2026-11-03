@@ -92,7 +92,7 @@ export default function AiSettingsPage() {
           </Section>
           <Section title="Models" description="Leave empty to use the platform defaults.">
             <FormGrid>
-              <Field label="API base URL" htmlFor="ai-base" hint={`Default: ${data.defaults.baseUrl}`}>
+              <Field label="API base URL" htmlFor="ai-base" hint={`Default: ${data.defaults.baseUrl}. A custom URL is only used with your own API key.`}>
                 <Input id="ai-base" disabled={!editable} value={form.baseUrl} onChange={(e) => setForm({ ...form, baseUrl: e.target.value })} placeholder={data.defaults.baseUrl} />
               </Field>
               <Field label="Chat model" htmlFor="ai-chat" hint={`Default: ${data.defaults.chatModel}`}>

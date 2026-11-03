@@ -54,13 +54,40 @@ export function htmlToText(html: string): { title?: string; text: string } {
   return { title: title ? htmlToText(title).text : undefined, text: body };
 }
 
-function isPrivateAddress(ip: string): boolean {
-  if (isIP(ip) === 6) {
-    const v = ip.toLowerCase();
-    if (v === '::1' || v === '::' || v.startsWith('fc') || v.startsWith('fd') || v.startsWith('fe80')) return true;
-    if (v.startsWith('::ffff:')) return isPrivateAddress(v.slice(7));
-    return false;
+/** Expands an IPv6 address into its 8 groups (an embedded dotted IPv4 becomes 2 groups). */
+function ipv6Groups(ip: string): number[] {
+  let v = ip.toLowerCase().split('%')[0]!;
+  const dotted = /(\d+\.\d+\.\d+\.\d+)$/.exec(v);
+  if (dotted) {
+    const [a, b, c, d] = dotted[1]!.split('.').map(Number);
+    v = `${v.slice(0, -dotted[1]!.length)}${((a! << 8) | b!).toString(16)}:${((c! << 8) | d!).toString(16)}`;
   }
+  const [head, tail] = v.includes('::') ? v.split('::') : [v, undefined];
+  const left = head ? head.split(':') : [];
+  const right = tail ? tail.split(':') : [];
+  const fill = tail === undefined ? [] : Array(8 - left.length - right.length).fill('0');
+  return [...left, ...fill, ...right].map((g) => parseInt(g, 16));
+}
+
+export function isPrivateAddress(ip: string): boolean {
+  if (isIP(ip) === 6) {
+    const g = ipv6Groups(ip);
+    if (g.length !== 8 || g.some((n) => Number.isNaN(n))) return true; // unparseable: refuse
+    const embeddedV4 = () => `${g[6]! >> 8}.${g[6]! & 255}.${g[7]! >> 8}.${g[7]! & 255}`;
+    const zeroPrefix = g.slice(0, 5).every((n) => n === 0);
+    // IPv4-mapped (::ffff:a.b.c.d), IPv4-compatible (::a.b.c.d) and NAT64 (64:ff9b::a.b.c.d) reach IPv4 hosts.
+    // :: and ::1 land in 0.0.0.0/8 here and are refused with it.
+    if (zeroPrefix && (g[5] === 0xffff || g[5] === 0)) return isPrivateAddress(embeddedV4());
+    if (g[0] === 0x64 && g[1] === 0xff9b && g.slice(2, 6).every((n) => n === 0)) return isPrivateAddress(embeddedV4());
+    const first = g[0]!;
+    return (
+      (first & 0xfe00) === 0xfc00 || // unique local fc00::/7
+      (first & 0xffc0) === 0xfe80 || // link-local fe80::/10
+      (first & 0xffc0) === 0xfec0 || // site-local fec0::/10 (deprecated)
+      first >= 0xff00 // multicast
+    );
+  }
+  if (isIP(ip) !== 4) return true; // unparseable: refuse
   const [a, b] = ip.split('.').map(Number);
   return (
     a === 10 ||
@@ -70,6 +97,7 @@ function isPrivateAddress(ip: string): boolean {
     (a === 172 && b! >= 16 && b! <= 31) ||
     (a === 192 && b === 168) ||
     (a === 100 && b! >= 64 && b! <= 127) ||
+    (a === 198 && (b === 18 || b === 19)) ||
     a! >= 224
   );
 }

@@ -17,7 +17,8 @@ ENV_FILE="${ENV_FILE:-${SELLORA_BASE_DIR:-/opt/sellora-ai}/.env}"
 [[ -f "${ENV_FILE}" ]] || ENV_FILE="$(cd "$(dirname "$0")/../.." && pwd)/.env"
 [[ -f "${ENV_FILE}" ]] || { echo "No .env found"; exit 1; }
 
-getenv() { grep -E "^$1=" "${ENV_FILE}" | tail -n1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//'; }
+# Strips one matching pair of quotes ("...", '...' or `...`) the way dotenv does.
+getenv() { grep -E "^$1=" "${ENV_FILE}" | tail -n1 | cut -d= -f2- | sed -E "s/^([\"'\`])(.*)\1\$/\2/"; }
 DATABASE_URL="$(getenv DATABASE_URL)"
 BACKUP_DIR="$(getenv BACKUP_DIR)"; BACKUP_DIR="${BACKUP_DIR:-/opt/sellora-ai/backups}"
 RETENTION="$(getenv BACKUP_RETENTION_DAYS)"; RETENTION="${RETENTION:-14}"

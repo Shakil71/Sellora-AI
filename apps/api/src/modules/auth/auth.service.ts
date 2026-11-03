@@ -312,7 +312,9 @@ export class AuthService {
     if (!token || token.type !== type || token.usedAt || token.expiresAt < new Date()) {
       throw new AppException('INVALID_TOKEN', 'This link is invalid or has expired.', HttpStatus.BAD_REQUEST);
     }
-    await this.prisma.verificationToken.update({ where: { id: token.id }, data: { usedAt: new Date() } });
+    // Conditional update: of two concurrent requests with the same link, only one wins.
+    const { count } = await this.prisma.verificationToken.updateMany({ where: { id: token.id, usedAt: null }, data: { usedAt: new Date() } });
+    if (!count) throw new AppException('INVALID_TOKEN', 'This link is invalid or has expired.', HttpStatus.BAD_REQUEST);
     return token;
   }
 

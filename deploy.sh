@@ -40,14 +40,16 @@ fi
 log "Validating environment"
 [[ -f "${ENV_FILE}" ]] || fail "Missing ${ENV_FILE}. Copy .env.example there and fill it in."
 ln -sfn "${ENV_FILE}" "${APP_DIR}/.env"
+# Strips one matching pair of quotes ("...", '...' or `...`) the way dotenv does.
+unquote() { sed -E "s/^([\"'\`])(.*)\1\$/\2/"; }
 required=(NODE_ENV APP_URL API_URL DATABASE_URL REDIS_URL JWT_SECRET JWT_REFRESH_SECRET ENCRYPTION_KEY)
 for key in "${required[@]}"; do
-  value="$(grep -E "^${key}=" "${ENV_FILE}" | tail -n1 | cut -d= -f2- | tr -d '"')"
+  value="$(grep -E "^${key}=" "${ENV_FILE}" | tail -n1 | cut -d= -f2- | unquote)"
   [[ -n "${value}" ]] || fail "${key} is not set in ${ENV_FILE}"
 done
 grep -qE '^NODE_ENV=production' "${ENV_FILE}" || fail "NODE_ENV must be production"
 [[ "$(grep -E '^ENCRYPTION_KEY=' "${ENV_FILE}" | cut -d= -f2 | tr -d '"' | wc -c)" -ge 65 ]] || fail "ENCRYPTION_KEY must be 64 hex characters"
-env_get() { grep -E "^$1=" "${ENV_FILE}" | tail -n1 | cut -d= -f2- | tr -d '"' ; }
+env_get() { grep -E "^$1=" "${ENV_FILE}" | tail -n1 | cut -d= -f2- | unquote ; }
 API_PORT="$(env_get API_PORT)"; API_PORT="${API_PORT:-4000}"
 WEB_PORT="$(env_get WEB_PORT)"; WEB_PORT="${WEB_PORT:-3000}"
 HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:${API_PORT}}"

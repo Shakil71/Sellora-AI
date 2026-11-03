@@ -5,7 +5,8 @@ import { z } from 'zod';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { decryptJson, encryptJson, maskSecret } from '../../common/utils/crypto.util';
-import { NotConfiguredError } from '../../common/errors';
+import { NotConfiguredError, ValidationError } from '../../common/errors';
+import { assertPublicUrl } from './text-extraction';
 import { env } from '../../config/env';
 import type { Actor } from '../../common/auth-context';
 
@@ -44,8 +45,15 @@ export interface LLMProvider {
 class OpenAICompatibleProvider implements LLMProvider {
   private readonly client: OpenAI;
 
-  constructor(apiKey: string, baseURL: string) {
-    this.client = new OpenAI({ apiKey, baseURL, timeout: 60_000, maxRetries: 1 });
+  constructor(apiKey: string, baseURL: string, blockRedirects = false) {
+    this.client = new OpenAI({
+      apiKey,
+      baseURL,
+      timeout: 60_000,
+      maxRetries: 1,
+      // A checked public URL must not bounce the request to an internal address.
+      ...(blockRedirects ? { fetch: (url: RequestInfo | URL, init?: RequestInit) => fetch(url, { ...init, redirect: 'error' }) } : {}),
+    });
   }
 
   private wrap(err: unknown): AIProviderError {
@@ -139,18 +147,20 @@ export class AIProviderService {
     return decryptJson<StoredAIConfig>(tenant?.aiConfigEnc);
   }
 
-  /** Workspace key first, then the platform key from the environment. */
+  /**
+   * Workspace key first, then the platform key from the environment. The
+   * platform key is only ever sent to the platform base URL: a workspace-chosen
+   * URL would otherwise receive it.
+   */
   async resolve(tenantId: string): Promise<ResolvedAIConfig | null> {
     const cfg = await this.stored(tenantId);
-    const apiKey = cfg?.apiKey ?? env.OPENAI_API_KEY;
-    if (!apiKey) return null;
-    return {
-      source: cfg?.apiKey ? 'workspace' : 'platform',
-      apiKey,
-      baseUrl: cfg?.baseUrl ?? env.OPENAI_BASE_URL,
-      chatModel: cfg?.chatModel ?? env.AI_DEFAULT_MODEL,
-      embeddingModel: cfg?.embeddingModel ?? env.AI_EMBEDDING_MODEL,
-    };
+    const chatModel = cfg?.chatModel ?? env.AI_DEFAULT_MODEL;
+    const embeddingModel = cfg?.embeddingModel ?? env.AI_EMBEDDING_MODEL;
+    if (cfg?.apiKey) {
+      return { source: 'workspace', apiKey: cfg.apiKey, baseUrl: cfg.baseUrl ?? env.OPENAI_BASE_URL, chatModel, embeddingModel };
+    }
+    if (!env.OPENAI_API_KEY) return null;
+    return { source: 'platform', apiKey: env.OPENAI_API_KEY, baseUrl: env.OPENAI_BASE_URL, chatModel, embeddingModel };
   }
 
   async isConfigured(tenantId: string) {
@@ -160,7 +170,18 @@ export class AIProviderService {
   private async provider(tenantId: string): Promise<{ provider: LLMProvider; config: ResolvedAIConfig }> {
     const config = await this.resolve(tenantId);
     if (!config) throw new NotConfiguredError('The AI provider', 'Add an OpenAI API key in Settings → AI.');
-    return { provider: new OpenAICompatibleProvider(config.apiKey, config.baseUrl), config };
+    // A workspace URL is re-checked on every call, since its DNS may change after it was saved.
+    // The check and the SDK resolve DNS separately, so a rebinding host can still race it; the
+    // same limitation applies to every assertPublicUrl caller (see docs/SECURITY.md follow-ups).
+    const customUrl = config.baseUrl !== env.OPENAI_BASE_URL;
+    if (customUrl) {
+      try {
+        await assertPublicUrl(config.baseUrl);
+      } catch (err) {
+        throw new AIProviderError(`The AI base URL is not allowed: ${(err as Error).message}`, false);
+      }
+    }
+    return { provider: new OpenAICompatibleProvider(config.apiKey, config.baseUrl, customUrl), config };
   }
 
   estimateCost(promptTokens: number, completionTokens: number) {
@@ -230,6 +251,15 @@ export class AIProviderService {
 
   async updateSettings(actor: Actor, input: z.infer<typeof aiSettingsSchema>) {
     const current = (await this.stored(actor.tenantId)) ?? { provider: 'openai' as const };
+    // Only a changed URL is checked here, so re-saving other settings (e.g. instructions) never
+    // fails on a URL saved earlier; provider() re-checks the URL before every call anyway.
+    if (input.baseUrl && input.baseUrl !== env.OPENAI_BASE_URL && input.baseUrl !== current.baseUrl) {
+      try {
+        await assertPublicUrl(input.baseUrl);
+      } catch (err) {
+        throw new ValidationError(`baseUrl: ${(err as Error).message}`);
+      }
+    }
     const next: StoredAIConfig = {
       provider: 'openai',
       apiKey: input.clearApiKey ? undefined : (input.apiKey ?? current.apiKey),
