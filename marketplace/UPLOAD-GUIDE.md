@@ -43,7 +43,7 @@ On author.envato.com, go to **Upload** → **CodeCanyon**.
 
 ### Message to the reviewer (example)
 
-> Sellora AI is a self-hosted Node.js SaaS (Next.js 16 + NestJS 11, PostgreSQL, Redis). Installation on Ubuntu is automated by `deploy/scripts/setup-server.sh` and `deploy.sh`; the full steps are in Documentation/index.html. Demo login: demo@sellora.test / SelloraDemo2026 (demo workspace, data resets daily). Product screenshots use fictional demo data. WhatsApp, Messenger and Instagram use Meta's official APIs; no Meta logos are used.
+> Sellora AI is a self-hosted Node.js SaaS (Next.js 16 + NestJS 11, PostgreSQL, Redis). Installation on Ubuntu is automated by `deploy/scripts/setup-server.sh` and `deploy.sh`; the full steps are in Documentation/index.html. Demo: http://27.147.147.228:8090 — business owner demo@sellora.test / SelloraDemo2026, platform admin admin@sellora.test / SelloraAdmin2026 (data resets every 3 hours). Product screenshots use fictional demo data. WhatsApp, Messenger and Instagram use Meta's official APIs; no Meta logos are used.
 
 ## 3. Before you submit: still to do
 
