@@ -38,7 +38,7 @@ On author.envato.com, go to **Upload** → **CodeCanyon**.
 | High resolution | Yes |
 | Documentation | Well documented |
 | Layout | Responsive |
-| Demo URL | Your public demo (see section 3) |
+| Demo URL | `http://27.147.147.228:8090` (see section 3) |
 | Price | Envato reviews it and may suggest a price |
 
 ### Message to the reviewer (example)
@@ -47,11 +47,11 @@ On author.envato.com, go to **Upload** → **CodeCanyon**.
 
 ## 3. Before you submit: still to do
 
-1. **Public demo.** Reviewers and buyers expect a working live preview. Your current server (192.168.197.100) is only reachable on your local network. For the demo, use a public VPS or open ports 80/443 on your router to this server, and give it a domain with HTTPS. Then:
-   ```bash
-   cd /opt/sellora-ai/app && npm run db:seed:demo
+1. **Public demo: done.** `http://27.147.147.228:8090` (router port 8090 → server 192.168.197.100:80) runs the demo workspace, login `demo@sellora.test` / `SelloraDemo2026`. `/opt/sellora-ai/demo/reset-demo.sh` restores it from `snapshot.dump`; schedule it every 3 hours in the `sellora` user's crontab:
    ```
-   Keep demo and real customers on separate installations. The demo account's password is public.
+   0 */3 * * * /opt/sellora-ai/demo/reset-demo.sh >> /opt/sellora-ai/logs/demo-reset.log 2>&1
+   ```
+   The reset wipes everything created since the snapshot, so never use this server for real customers. After deliberate changes (for example a new admin password), save them with `/opt/sellora-ai/demo/snapshot-demo.sh`. A domain with HTTPS looks more trustworthy to reviewers than a bare IP and port.
 2. **Envato author account.** Have your tax information and payout method in place, and your author profile filled in.
 3. **Support policy.** Decide whether you offer support (the docs say: through the item's Support tab) and set it on the item page.
 4. **Check the main ZIP once.** Unzip it on a clean Ubuntu VPS and follow Documentation/index.html → section 4 from start to finish.
