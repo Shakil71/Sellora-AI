@@ -7,7 +7,8 @@
 #   sudo bash setup-server.sh <git-repo-url | none> [domain-or-ip] [deploy-user]
 #   Use "none" when you downloaded a ZIP: unzip it into /opt/sellora-ai/app afterwards.
 # Example:
-#   sudo bash setup-server.sh https://github.com/Shakil71/Sellora-AI.git 192.168.197.100 sellora
+#   sudo bash setup-server.sh none app.yourshop.com sellora        (ZIP download)
+#   sudo bash setup-server.sh https://github.com/you/sellora-ai.git app.yourshop.com sellora
 # =============================================================================
 set -Eeuo pipefail
 REPO="${1:?Repository URL required, or the word none when you will upload the ZIP yourself}"

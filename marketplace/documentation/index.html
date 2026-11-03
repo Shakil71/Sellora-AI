@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sellora AI Documentation</title>
+<style>
+:root {
+  --bg: #f8fafc; --panel: #ffffff; --text: #1e293b; --muted: #64748b; --line: #e2e8f0;
+  --brand: #0f766e; --brand-soft: #e6f4f2; --code-bg: #f1f5f9;
+  --warn-bg: #fff7ed; --warn-line: #fdba74; --tip-bg: #ecfdf5; --tip-line: #6ee7b7;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1120; --panel: #111827; --text: #e5e7eb; --muted: #94a3b8; --line: #1f2937;
+    --brand: #2dd4bf; --brand-soft: #0f2e2b; --code-bg: #0f172a;
+    --warn-bg: #2a1a0a; --warn-line: #b45309; --tip-bg: #062a20; --tip-line: #047857;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: var(--brand); }
+nav { position: fixed; inset: 0 auto 0 0; width: 280px; overflow-y: auto; padding: 24px 20px; background: var(--panel); border-right: 1px solid var(--line); }
+nav .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 19px; margin-bottom: 4px; }
+nav .ver { color: var(--muted); font-size: 13px; margin: 0 0 18px 42px; }
+nav ol { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+nav li a { display: block; padding: 5px 10px; border-radius: 6px; color: var(--text); text-decoration: none; font-size: 14.5px; }
+nav li a:hover { background: var(--brand-soft); color: var(--brand); }
+main { margin-left: 280px; padding: 40px 56px 80px; max-width: 1060px; }
+section { padding-top: 12px; margin-bottom: 36px; }
+h1 { font-size: 34px; line-height: 1.2; margin: 0 0 8px; }
+h2 { font-size: 25px; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); scroll-margin-top: 16px; }
+h3 { font-size: 18px; margin: 26px 0 8px; }
+.lead { font-size: 18px; color: var(--muted); margin-top: 0; }
+code { font: 13.5px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+pre { background: var(--code-bg); border: 1px solid var(--line); padding: 14px 16px; border-radius: 8px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+table { width: 100%; border-collapse: collapse; margin: 12px 0 18px; font-size: 15px; }
+th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+th { background: var(--brand-soft); }
+.note { border-left: 4px solid; border-radius: 6px; padding: 10px 14px; margin: 14px 0; }
+.note.warn { background: var(--warn-bg); border-color: var(--warn-line); }
+.note.tip { background: var(--tip-bg); border-color: var(--tip-line); }
+.shot { width: 100%; border: 1px solid var(--line); border-radius: 10px; margin: 10px 0 4px; }
+.cap { color: var(--muted); font-size: 14px; margin: 0 0 16px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin: 14px 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.card b { display: block; margin-bottom: 4px; }
+ol.steps > li { margin-bottom: 10px; }
+.kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-size: 13px; }
+@media (max-width: 900px) {
+  nav { position: static; width: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+  main { margin-left: 0; padding: 24px 16px 60px; }
+}
+@media print { nav { display: none; } main { margin: 0; padding: 0; } }
+</style>
+</head>
+<body>
+<nav>
+  <div class="logo">
+    <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#14b8a6"/><stop offset="1" stop-color="#0f5f5a"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="url(#g)"/><path d="M21.2 10.6c-1.2-1.5-3.1-2.4-5.3-2.4-3.2 0-5.4 1.8-5.4 4.2 0 5.3 10.9 3.1 10.9 8.8 0 2.5-2.4 4.3-5.6 4.3-2.4 0-4.4-.9-5.7-2.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><path d="M24.6 5.8l.55 1.35 1.35.55-1.35.55-.55 1.35-.55-1.35-1.35-.55 1.35-.55z" fill="#fff"/></svg>
+    Sellora AI
+  </div>
+  <p class="ver">Documentation · v{{VERSION}}</p>
+  <ol>
+    <li><a href="#intro">1. Introduction</a></li>
+    <li><a href="#package">2. What is in the download</a></li>
+    <li><a href="#requirements">3. Requirements</a></li>
+    <li><a href="#install">4. Install on a VPS</a></li>
+    <li><a href="#installer">5. The setup wizard</a></li>
+    <li><a href="#other">6. Other servers and cPanel</a></li>
+    <li><a href="#local">7. Run on your computer</a></li>
+    <li><a href="#https">8. Domain and HTTPS</a></li>
+    <li><a href="#first">9. First steps after install</a></li>
+    <li><a href="#ai">10. AI sales agent</a></li>
+    <li><a href="#whatsapp">11. WhatsApp</a></li>
+    <li><a href="#channels">12. Website chat, Messenger, Instagram</a></li>
+    <li><a href="#payments">13. Payments and plans</a></li>
+    <li><a href="#config">14. Configuration (.env)</a></li>
+    <li><a href="#update">15. Updating</a></li>
+    <li><a href="#backup">16. Backups</a></li>
+    <li><a href="#trouble">17. Troubleshooting</a></li>
+    <li><a href="#faq">18. FAQ</a></li>
+    <li><a href="#support">19. Support</a></li>
+    <li><a href="#changelog">20. Changelog</a></li>
+    <li><a href="#credits">21. Credits and licenses</a></li>
+  </ol>
+</nav>
+
+<main>
+<header>
+  <h1>Sellora AI</h1>
+  <p class="lead">AI sales agent, team inbox, CRM and commerce platform for WhatsApp, website chat, Messenger and Instagram. Multi-tenant SaaS you host on your own server.</p>
+  <p>Version {{VERSION}} · Thank you for your purchase. This page explains how to install, configure and update Sellora AI. It works offline: open it in any browser.</p>
+</header>
+
+<section id="intro">
+  <h2>1. Introduction</h2>
+  <p>Sellora AI lets businesses sell through chat. An AI agent answers customers on WhatsApp and other channels, finds products, checks stock, quotes totals, takes orders and sends payment links, and hands the conversation to a person whenever needed. You run it as a SaaS: each business gets its own workspace, team, plan and data.</p>
+  <img class="shot" src="assets/dashboard.png" alt="Sellora AI dashboard">
+  <p class="cap">Dashboard of a workspace (demo data).</p>
+  <div class="grid">
+    <div class="card"><b>AI sales agent</b>Product search, stock, quotes, leads, orders and payment links through controlled tools. Every action is checked and logged.</div>
+    <div class="card"><b>Omnichannel inbox</b>WhatsApp Cloud API, website chat widget, Messenger and Instagram in one realtime inbox with AI/human takeover.</div>
+    <div class="card"><b>CRM</b>Customers, leads, deals with drag-and-drop pipelines, tasks and notes.</div>
+    <div class="card"><b>Commerce</b>Products, categories, inventory with reservations, orders, invoices (PDF), payments and deliveries.</div>
+    <div class="card"><b>Payments</b>Stripe, PayPal, Razorpay, Paystack, SSLCOMMERZ, payment-link providers and manual methods such as bKash, Nagad, UPI, M-Pesa, bank transfer and cash on delivery.</div>
+    <div class="card"><b>Knowledge base</b>Teach the AI from PDF, Word, text, Markdown and web pages.</div>
+    <div class="card"><b>Automation</b>Visual workflows with triggers, conditions and actions, retries and run logs.</div>
+    <div class="card"><b>SaaS platform</b>Plans and limits, plan payments, platform admin, editable home page, setup wizard.</div>
+    <div class="card"><b>Security</b>Workspace isolation, roles and permissions, 2FA, audit log, encrypted secrets, rate limits.</div>
+  </div>
+  <h3>Technology</h3>
+  <p>Next.js 16 and React (web), NestJS 11 with Prisma (API), PostgreSQL, Redis with BullMQ (background jobs) and Socket.IO (realtime). In production it runs with PM2 behind Nginx. Docker is not needed.</p>
+</section>
+
+<section id="package">
+  <h2>2. What is in the download</h2>
+<pre><code>Sellora-AI-v{{VERSION}}/
+├── sellora-ai.zip        The application. Upload this file to your server.
+├── Documentation/
+│   ├── index.html        This page
+│   └── Sellora-AI-Installation-Guide.docx   Step-by-step guide with screenshots of every command
+├── Licensing/            License and third-party license summary
+└── README.txt            Start here</code></pre>
+  <p>Inside <code>sellora-ai.zip</code> is one folder, <code>sellora-ai</code>, with the full source code: <code>apps/api</code> (API and background worker), <code>apps/web</code> (web app and home page), <code>packages/shared</code>, <code>deploy/</code> (server scripts and Nginx/Apache configs), <code>docs/</code> (technical documentation in Markdown) and <code>deploy.sh</code>.</p>
+</section>
+
+<section id="requirements">
+  <h2>3. Requirements</h2>
+  <table>
+    <tr><th>Item</th><th>Minimum</th><th>Recommended</th></tr>
+    <tr><td>Server</td><td>VPS or dedicated server with root (SSH) access</td><td>Ubuntu 22.04 or 24.04</td></tr>
+    <tr><td>Memory / disk</td><td>2 GB RAM, 10 GB disk</td><td>4 GB RAM, 20 GB+ disk</td></tr>
+    <tr><td>Node.js</td><td>20.11</td><td>22 LTS</td></tr>
+    <tr><td>PostgreSQL</td><td>14</td><td>16 or newer</td></tr>
+    <tr><td>Redis</td><td>5.0</td><td>6.2 or newer</td></tr>
+    <tr><td>Web server</td><td colspan="2">Nginx (installed by the setup script) or Apache as a reverse proxy</td></tr>
+    <tr><td>Domain</td><td colspan="2">A domain or subdomain (for example <code>app.yourshop.com</code>). WhatsApp, Messenger and Instagram require HTTPS on a public domain.</td></tr>
+  </table>
+  <p>Optional: an AI key from OpenAI or any OpenAI-compatible provider, an SMTP account for emails, a Meta developer app for WhatsApp, Messenger and Instagram.</p>
+  <div class="note warn"><b>Shared hosting is not supported.</b> Ordinary cPanel shared hosting cannot run Redis or keep the three Node.js processes running. Keep your website there and run Sellora AI on a small VPS on a subdomain (see <a href="#other">section 6</a>).</div>
+</section>
+
+<section id="install">
+  <h2>4. Install on a VPS (Ubuntu, recommended)</h2>
+  <p>The setup script installs and configures everything: Node.js 22, PostgreSQL, Redis, Nginx, PM2, a firewall, brute-force protection, daily encrypted backups and a <code>.env</code> file with fresh secrets. Allow about 30 minutes.</p>
+  <ol class="steps">
+    <li><b>Point your domain to the server.</b> At your domain registrar create an <code>A</code> record, for example <code>app</code> → your server IP. You can also start with the bare IP address and add a domain later.</li>
+    <li><b>Upload the application.</b> On your computer (PowerShell on Windows, Terminal on macOS/Linux):
+<pre><code>scp sellora-ai.zip root@YOUR_SERVER_IP:/root/</code></pre></li>
+    <li><b>Unpack it on the server.</b> Connect with <code>ssh root@YOUR_SERVER_IP</code>, then:
+<pre><code>apt update && apt install -y unzip
+mkdir -p /opt/sellora-ai/app
+unzip /root/sellora-ai.zip -d /root/sellora-unzipped
+cp -a /root/sellora-unzipped/sellora-ai/. /opt/sellora-ai/app/</code></pre></li>
+    <li><b>Prepare the server</b> (replace the domain with yours, or with the server IP):
+<pre><code>bash /opt/sellora-ai/app/deploy/scripts/setup-server.sh none app.yourshop.com sellora</code></pre>
+      At the end the script prints your <b>installer token</b> and a <b>backup passphrase</b>. Save both in a password manager.</li>
+    <li><b>Build and start the application</b> as the <code>sellora</code> user:
+<pre><code>sudo -iu sellora
+cd /opt/sellora-ai/app && ./deploy.sh</code></pre>
+      This installs packages, builds the API and web app, creates the database tables, starts the API, worker and web app with PM2 and checks that everything is healthy. The first run takes 5 to 10 minutes.</li>
+    <li><b>Open the setup wizard</b> at <code>http://app.yourshop.com/install</code> (see the next section).</li>
+    <li><b>Turn on HTTPS</b> (see <a href="#https">section 8</a>).</li>
+  </ol>
+  <div class="note tip">The Word guide in the Documentation folder walks through each of these steps with more detail, including how to connect with SSH from Windows.</div>
+</section>
+
+<section id="installer">
+  <h2>5. The setup wizard</h2>
+  <p>Open <code>/install</code> on your site. The wizard checks the server, tests the database, saves settings, creates the tables and creates your platform administrator account. When it finishes it locks itself, so nobody else can run it.</p>
+  <h3>Where is the installer token?</h3>
+  <p>The wizard asks for a token so that no stranger can take over a fresh installation. Find it on the server:</p>
+<pre><code>grep INSTALLER_TOKEN /opt/sellora-ai/.env</code></pre>
+  <p>If <code>INSTALLER_TOKEN</code> is empty, the API generates one on start and writes it to <code>storage/install-token.txt</code> in the application folder and to the API log (<code>pm2 logs sellora-api</code>).</p>
+  <h3>Without the wizard</h3>
+  <p>You can create the administrator from the command line instead. This also locks the wizard:</p>
+<pre><code>cd /opt/sellora-ai/app/apps/api
+npm run db:seed -- --admin you@example.com 'Your-Strong-Passw0rd'</code></pre>
+</section>
+
+<section id="other">
+  <h2>6. Other servers and cPanel</h2>
+  <table>
+    <tr><th>Your server</th><th>What to do</th></tr>
+    <tr><td>Ubuntu 22.04 / 24.04 VPS</td><td>Use <a href="#install">section 4</a>.</td></tr>
+    <tr><td>AlmaLinux, Rocky, Oracle Linux, RHEL</td><td>Install Node.js 22, PostgreSQL 16, Redis and Nginx with <code>dnf</code>, then follow <code>docs/DEPLOYMENT.md</code> → "RHEL-family server". With SELinux, allow Nginx to reach the app: <code>setsebool -P httpd_can_network_connect 1</code>.</td></tr>
+    <tr><td>Server that already runs Apache</td><td>Keep Apache and give Sellora its own ports. Use <code>deploy/apache/sellora.conf</code> (see <code>docs/DEPLOYMENT.md</code>).</td></tr>
+    <tr><td>cPanel/WHM with root access</td><td>Possible but advanced. Follow "Path C, part 2" in the Word guide. Do not run <code>setup-server.sh</code> on a cPanel server.</td></tr>
+    <tr><td>cPanel shared hosting</td><td>Not supported. Run Sellora AI on a small VPS and point a subdomain to it from cPanel's Zone Editor. Your website and email stay where they are.</td></tr>
+  </table>
+</section>
+
+<section id="local">
+  <h2>7. Run on your computer</h2>
+  <p>For testing or development on Windows, macOS or Linux. Install Node.js 22, PostgreSQL and Redis (on Windows, use Memurai or Redis in WSL), then:</p>
+<pre><code>unzip sellora-ai.zip && cd sellora-ai
+cp .env.example .env        # set DATABASE_URL, REDIS_URL, JWT_SECRET, JWT_REFRESH_SECRET, ENCRYPTION_KEY
+npm install
+npm run db:deploy           # create the tables
+npm run db:seed:demo        # optional: demo workspace "Acme Commerce"
+npm run dev                 # web on :3000, API on :4000, worker</code></pre>
+  <p>Open <code>http://localhost:3000</code>. Demo sign-in (only after seeding demo data): <code>demo@sellora.test</code> / <code>SelloraDemo2026</code>. Never load demo data on a live server you use for real customers.</p>
+</section>
+
+<section id="https">
+  <h2>8. Domain and HTTPS</h2>
+  <ol class="steps">
+    <li>Make sure your domain points to the server (<code>ping app.yourshop.com</code> shows the server IP).</li>
+    <li>Get a free certificate: <pre><code>sudo certbot --nginx -d app.yourshop.com</code></pre></li>
+    <li>In <code>/opt/sellora-ai/.env</code> set:
+<pre><code>APP_URL=https://app.yourshop.com
+API_URL=https://app.yourshop.com
+CORS_ORIGINS=https://app.yourshop.com
+COOKIE_SECURE=true
+TRUST_PROXY=true</code></pre></li>
+    <li>Apply it: <code>cd /opt/sellora-ai/app && ./deploy.sh</code> (the web app includes the address at build time).</li>
+  </ol>
+  <div class="note warn">The address in your browser must match <code>APP_URL</code> exactly. A different host, port or <code>http</code>/<code>https</code> causes sign-in loops or "Security check failed" errors.</div>
+</section>
+
+<section id="first">
+  <h2>9. First steps after install</h2>
+  <p>Sign in with the administrator account. Platform administrators see <b>Platform admin</b> in the user menu.</p>
+  <ol class="steps">
+    <li><b>Email</b>: set the <code>SMTP_*</code> values in <code>.env</code> and run <code>./deploy.sh</code>. Without email, invitation links are shown on screen to share by hand, and password reset is not available.</li>
+    <li><b>AI key for everyone (optional)</b>: set <code>OPENAI_API_KEY</code> in <code>.env</code> to give all workspaces AI without their own key. Leave it empty if each business should bring its own key.</li>
+    <li><b>Plan prices</b>: Platform admin → Plan payments. Set the monthly price of each plan, the currency and how businesses pay you (bKash, Nagad, bank transfer, or card through Stripe with <code>STRIPE_SECRET_KEY</code>). The home page pricing follows these prices.</li>
+    <li><b>Home page</b>: Platform admin → Edit home page. Change the brand name, texts, sections, FAQ and search-engine text.</li>
+    <li><b>Create a workspace</b> for yourself or invite your first business. Each workspace's dashboard shows a "Get ready to sell" checklist.</li>
+  </ol>
+</section>
+
+<section id="ai">
+  <h2>10. AI sales agent</h2>
+  <img class="shot" src="assets/inbox.png" alt="Inbox with an AI conversation">
+  <p class="cap">The inbox: the AI answers, your team can take over at any time.</p>
+  <ol class="steps">
+    <li><b>Settings → AI</b>: paste an API key (OpenAI or any OpenAI-compatible service), press Save, then <b>Test connection</b>. Keys are stored encrypted. A custom base URL is used only together with the workspace's own key.</li>
+    <li><b>Products</b>: add products with prices and stock. The AI only quotes prices and stock it finds in the catalog.</li>
+    <li><b>AI → Knowledge base</b>: upload delivery terms, return policy, FAQs, opening hours (PDF, Word, text, Markdown or a web address).</li>
+    <li><b>AI → AI instructions</b>: rules for every agent, for example "Never offer discounts."</li>
+    <li><b>AI → Agents</b>: set tone, language, escalation rules, working hours and which tools the agent may use. Test it in the <b>Playground</b>: it runs in test mode and creates nothing.</li>
+  </ol>
+  <p>Orders are placed only after the customer confirms the summary. If the AI is unsure, over its plan limit or the provider fails, the conversation goes to your team automatically.</p>
+</section>
+
+<section id="whatsapp">
+  <h2>11. WhatsApp</h2>
+  <p>Sellora AI uses Meta's official WhatsApp Cloud API. You need a Meta developer app and a WhatsApp Business account; Meta's approval can take a few days.</p>
+  <ol class="steps">
+    <li>At <a href="https://developers.facebook.com">developers.facebook.com</a> create an app, add <b>WhatsApp</b> and a phone number.</li>
+    <li>Create a <b>System User</b> with <code>whatsapp_business_messaging</code> and <code>whatsapp_business_management</code> and generate a permanent token.</li>
+    <li>In Sellora AI: <b>WhatsApp → Accounts → Connect number</b>. Enter the Phone number ID, WhatsApp Business Account ID, the token and the <b>App secret</b> (App settings → Basic).</li>
+    <li>Copy the <b>Callback URL</b> and <b>Verify token</b> shown there into Meta → WhatsApp → Configuration → Webhook, and subscribe to <code>messages</code>.</li>
+    <li>Press <b>Test connection</b>. Use <b>Templates</b> to message customers outside WhatsApp's 24-hour window.</li>
+  </ol>
+  <div class="note tip">No WhatsApp yet? Use <b>Inbox → Test conversation</b> to try the whole AI flow without sending anything.</div>
+</section>
+
+<section id="channels">
+  <h2>12. Website chat, Messenger and Instagram</h2>
+  <h3>Website chat</h3>
+  <p><b>Integrations → Website chat → Add website chat</b>. Choose the AI agent, colours and greeting, then paste the one-line code before <code>&lt;/body&gt;</code> on any website. Built-in guides cover WordPress, Shopify, Wix, Squarespace, Webflow and Google Tag Manager.</p>
+  <h3>Messenger and Instagram</h3>
+  <ol class="steps">
+    <li>In your Meta app add <b>Messenger</b> (and <b>Instagram</b>). Link your Instagram professional account to your Facebook Page.</li>
+    <li>Generate a long-lived Page access token with <code>pages_messaging</code> (and <code>instagram_manage_messages</code>) and copy the App secret.</li>
+    <li><b>Integrations → Messenger / Instagram → Connect</b>, then paste the shown Callback URL and Verify token into the app's webhook settings.</li>
+  </ol>
+  <h3>Webhooks and API</h3>
+  <p><b>Integrations → Webhooks</b> sends signed events (orders, leads, messages, stock) to your other systems. <b>Settings → API</b> creates API keys; <b>Integrations → Developer API</b> shows ready-made examples. Full reference: <code>docs/API.md</code>.</p>
+</section>
+
+<section id="payments">
+  <h2>13. Payments and plans</h2>
+  <img class="shot" src="assets/orders.png" alt="Orders list">
+  <p class="cap">Orders with payment and delivery status.</p>
+  <h3>Payments for each business</h3>
+  <p>Each business adds its own payment methods under <b>Integrations → Payments</b>: Stripe, PayPal, Razorpay, Paystack, SSLCOMMERZ, any provider through a payment link, or manual methods (bKash, Nagad, UPI, M-Pesa, bank transfer, cash on delivery). Each method can be limited to countries and currencies. The AI sends payment links or instructions in the chat, and verified gateway webhooks mark orders as paid.</p>
+  <h3>Plans for your SaaS</h3>
+  <p>Plans (Free, Starter, Pro, Business, Enterprise) limit AI messages, WhatsApp messages, members, products and more. Prices are set in Platform admin → Plan payments; the limits are in <code>packages/shared/src/plans.ts</code>. Platform admins can also assign a plan to any workspace. Businesses can pay you without a gateway: they submit a bKash, Nagad or bank transfer ID and you approve it. With <code>STRIPE_SECRET_KEY</code> and <code>STRIPE_WEBHOOK_SECRET</code> they can also pay by card.</p>
+</section>
+
+<section id="config">
+  <h2>14. Configuration (.env)</h2>
+  <p>All settings live in one file: <code>/opt/sellora-ai/.env</code>. After changing it, run <code>./deploy.sh</code>. The most important values:</p>
+  <table>
+    <tr><th>Variable</th><th>Meaning</th></tr>
+    <tr><td><code>APP_URL</code>, <code>API_URL</code>, <code>CORS_ORIGINS</code></td><td>Your public address, for example <code>https://app.yourshop.com</code>.</td></tr>
+    <tr><td><code>DATABASE_URL</code>, <code>REDIS_URL</code></td><td>Database and Redis connections (set by the setup script).</td></tr>
+    <tr><td><code>JWT_SECRET</code>, <code>JWT_REFRESH_SECRET</code></td><td>Random secrets for sign-in sessions.</td></tr>
+    <tr><td><code>ENCRYPTION_KEY</code></td><td>Encrypts stored tokens and AI keys. <b>Back it up. Never change it</b> on a running installation, or stored secrets become unreadable.</td></tr>
+    <tr><td><code>COOKIE_SECURE</code>, <code>TRUST_PROXY</code></td><td><code>true</code> with HTTPS behind Nginx.</td></tr>
+    <tr><td><code>OPENAI_API_KEY</code>, <code>AI_DEFAULT_MODEL</code></td><td>Optional platform AI key and default model.</td></tr>
+    <tr><td><code>SMTP_HOST</code>, <code>SMTP_USER</code>, <code>SMTP_PASSWORD</code>, <code>MAIL_FROM</code></td><td>Outgoing email.</td></tr>
+    <tr><td><code>STORAGE_DRIVER</code> and <code>STORAGE_*</code></td><td><code>local</code> (default) or <code>s3</code> for S3-compatible storage.</td></tr>
+    <tr><td><code>BACKUP_PASSPHRASE</code></td><td>Encrypts database backups. Keep a copy outside the server.</td></tr>
+  </table>
+  <p>Every variable is described in <code>docs/ENVIRONMENT.md</code>.</p>
+</section>
+
+<section id="update">
+  <h2>15. Updating to a new version</h2>
+  <p>Your data, settings and uploads are kept. <code>deploy.sh</code> backs up the database before it changes anything.</p>
+<pre><code># on your computer
+scp sellora-ai.zip root@YOUR_SERVER_IP:/root/
+
+# on the server
+rm -rf /root/sellora-unzipped && unzip /root/sellora-ai.zip -d /root/sellora-unzipped
+rsync -a --exclude ".env" --exclude "storage" --exclude "node_modules" --exclude ".next" \
+  /root/sellora-unzipped/sellora-ai/ /opt/sellora-ai/app/
+chown -R sellora:sellora /opt/sellora-ai/app
+sudo -iu sellora bash -c 'cd /opt/sellora-ai/app && ./deploy.sh'</code></pre>
+  <p>Read the <a href="#changelog">changelog</a> before upgrading. If you changed the source code, keep your changes in Git and merge the new version into it.</p>
+</section>
+
+<section id="backup">
+  <h2>16. Backups</h2>
+  <p>The database is backed up every night at 02:15 and before every deployment to <code>/opt/sellora-ai/backups</code>, encrypted with <code>BACKUP_PASSPHRASE</code>. Backups older than 14 days are deleted.</p>
+<pre><code>/opt/sellora-ai/app/deploy/scripts/backup-db.sh                    # back up now
+pm2 stop sellora-api sellora-worker
+/opt/sellora-ai/app/deploy/scripts/restore-db.sh /opt/sellora-ai/backups/FILE   # a .dump or .dump.enc file
+pm2 start sellora-api sellora-worker</code></pre>
+  <p>Also copy backups, <code>/opt/sellora-ai/.env</code> and <code>/opt/sellora-ai/app/storage/uploads</code> to another place regularly.</p>
+</section>
+
+<section id="trouble">
+  <h2>17. Troubleshooting</h2>
+  <p>Start with these commands on the server:</p>
+<pre><code>pm2 status
+curl -s localhost:4000/health/ready
+pm2 logs sellora-api --lines 100</code></pre>
+  <table>
+    <tr><th>Problem</th><th>Solution</th></tr>
+    <tr><td>Site does not open</td><td>Check <code>pm2 status</code> (all three online) and <code>systemctl status nginx</code>. Open only ports 80 and 443 in the firewall; use the address without a port.</td></tr>
+    <tr><td>Signed out right away, or "Security check failed"</td><td><code>APP_URL</code>, <code>API_URL</code> and <code>CORS_ORIGINS</code> must match the address in the browser. <code>COOKIE_SECURE=true</code> only with HTTPS.</td></tr>
+    <tr><td>"Invalid environment configuration"</td><td>The message lists the wrong values. <code>ENCRYPTION_KEY</code> must be 64 hex characters.</td></tr>
+    <tr><td><code>/health/ready</code> shows <code>database: down</code> or <code>redis: down</code></td><td>Check the service (<code>systemctl status postgresql</code> / <code>redis-server</code>) and the URL in <code>.env</code>.</td></tr>
+    <tr><td>WhatsApp messages do not arrive</td><td>Open WhatsApp → Webhooks. No events: webhook not subscribed or site not reachable over HTTPS. Rejected events: wrong App secret.</td></tr>
+    <tr><td>AI does not reply</td><td>The conversation shows why: no AI key, plan limit reached, agent off or outside working hours. Use Settings → AI → Test connection.</td></tr>
+    <tr><td>Inbox does not update live</td><td>Nginx must forward <code>/socket.io/</code> with WebSocket headers (included in <code>deploy/nginx/sellora.conf</code>).</td></tr>
+    <tr><td>Upload too large</td><td>Raise <code>MAX_UPLOAD_MB</code> and Nginx <code>client_max_body_size</code> together.</td></tr>
+  </table>
+  <p>More answers: <code>docs/TROUBLESHOOTING.md</code>.</p>
+</section>
+
+<section id="faq">
+  <h2>18. FAQ</h2>
+  <h3>Do I need Docker?</h3><p>No. Sellora AI runs directly with Node.js, PM2 and Nginx.</p>
+  <h3>Which AI providers work?</h3><p>OpenAI and any service with an OpenAI-compatible API. The default model is <code>gpt-4o-mini</code>; you can change it per workspace and per agent.</p>
+  <h3>Is the WhatsApp integration official?</h3><p>Yes. It uses Meta's WhatsApp Cloud API. Unofficial WhatsApp Web automation is not used.</p>
+  <h3>Can each business use its own AI key and WhatsApp number?</h3><p>Yes. Keys, numbers and payment methods are set per workspace and stored encrypted.</p>
+  <h3>Can I change the name, logo and home page?</h3><p>Texts, sections and the brand name are editable in Platform admin → Edit home page. Logos are in <code>apps/web/public/brand</code>; rebuild with <code>./deploy.sh</code> after replacing them.</p>
+  <h3>Can I translate the interface?</h3><p>The interface is in English. The AI replies in the customer's language when the agent's language is set to "Auto".</p>
+</section>
+
+<section id="support">
+  <h2>19. Support</h2>
+  <p>Support is provided through the item's <b>Support</b> tab on CodeCanyon. It covers questions about features, help with bugs and installation problems on supported servers (see <a href="#requirements">requirements</a>).</p>
+  <p>Not included: server administration, hosting, customization, third-party services (Meta approval, AI providers, payment gateways) and installation on shared hosting.</p>
+  <p>Please include: your version (<code>{{VERSION}}</code>), server type, the output of <code>pm2 status</code> and <code>curl -s localhost:4000/health/ready</code>, and the <code>requestId</code> from the error message. Never send passwords or the contents of your <code>.env</code> file.</p>
+</section>
+
+<section id="changelog">
+  <h2>20. Changelog</h2>
+  <h3>{{VERSION}} — November 2026</h3>
+  <ul>
+    <li>Security: the platform AI key is never sent to a workspace-chosen AI address; workspace AI addresses must be public and may not redirect.</li>
+    <li>Security: a webhook signed by one workspace's secret can no longer deliver messages into another workspace.</li>
+    <li>Security: private-address checks cover IPv4 addresses embedded in IPv6; one-time links cannot be used twice by simultaneous requests.</li>
+    <li>Fixed: the setup wizard saves settings containing <code>$</code>, quotes or backslashes correctly.</li>
+    <li>Fixed: simultaneous order status changes can no longer restock inventory twice.</li>
+    <li>Improved: deployment works for service accounts and GitHub self-hosted runners; SELinux notes for RHEL-family servers.</li>
+    <li>New: this HTML documentation.</li>
+  </ul>
+  <h3>1.1.0</h3>
+  <ul>
+    <li>Payment methods per business, payment links from orders and the AI agent.</li>
+    <li>Plan billing without a gateway (bKash, Nagad, bank transfer with admin approval).</li>
+    <li>Product import from store links, WooCommerce, feeds and files.</li>
+    <li>Editable home page, redesigned setup wizard, installer token, stronger passwords and security headers.</li>
+  </ul>
+  <h3>1.0.0</h3>
+  <ul><li>Initial release.</li></ul>
+  <p>The full list is in <code>CHANGELOG.md</code> inside <code>sellora-ai.zip</code>.</p>
+</section>
+
+<section id="credits">
+  <h2>21. Credits and licenses</h2>
+  <p>Sellora AI is licensed under the Envato Regular or Extended License you purchased (see <code>Licensing/LICENSE.md</code>). It is built on open-source packages that keep their own licenses, mostly MIT, Apache-2.0, ISC and BSD; no GPL or AGPL package is included in the production build. See <code>Licensing/THIRD_PARTY_LICENSES.md</code>.</p>
+  <p>The interface uses the Inter typeface (SIL Open Font License 1.1). All illustrations, logos and screenshots are original to this product. Demo data is fictional.</p>
+  <p>WhatsApp, Messenger, Instagram and Facebook are trademarks of Meta Platforms, Inc. Sellora AI is not affiliated with or endorsed by Meta. Other product names belong to their owners.</p>
+</section>
+</main>
+</body>
+</html>

@@ -17,9 +17,10 @@ Nginx is needed in production as the reverse proxy. Docker is **not** required.
 
 ## 2. Get the code
 
+Unzip `sellora-ai.zip` from your download (or clone your own Git copy of the code):
+
 ```bash
-git clone https://github.com/Shakil71/Sellora-AI.git
-cd Sellora-AI
+unzip sellora-ai.zip && cd sellora-ai
 npm install
 ```
 

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.2.0 (2026-11-03)
 
 ### Security
 - **Platform AI key could leak to a workspace-chosen URL.** A workspace that set a custom AI base URL without its own key had the platform `OPENAI_API_KEY` sent to that URL. The platform key now only goes to `OPENAI_BASE_URL`; a custom URL is used only with the workspace's own key, must be a public address, and may not redirect.
@@ -13,6 +13,11 @@
 - Two simultaneous status changes on the same order can no longer release or restock inventory twice.
 - The platform admin queue view now includes the integrations queue (Messenger/Instagram webhooks, outgoing webhooks).
 - Home page structured data is escaped.
+- `deploy.sh` finds PM2 when run by a service account or the GitHub runner, and the GitHub deploy job no longer stops PM2 when it finishes.
+
+### Documentation
+- HTML documentation for buyers (`Documentation/index.html` in the download); installation guides now start from the product ZIP.
+- Oracle Linux, RHEL, Rocky and AlmaLinux (SELinux) notes for the GitHub deploy runner.
 
 ## 1.1.0
 

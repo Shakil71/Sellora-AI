@@ -2,3 +2,5 @@
 *.sh text eol=lf
 *.png binary
 *.ico binary
+# Marketplace packaging (build script, previews, listing text) is not part of the buyer source
+marketplace/ export-ignore

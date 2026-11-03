@@ -104,9 +104,10 @@ jobs:
     needs: ci
     # Enabled once the self-hosted runner is installed (repository variable
     # DEPLOY_ENABLED=true). See docs/DEPLOYMENT.md, "Continuous deployment".
+    # Forks never deploy, even if they copy the variable.
     if: >-
       vars.DEPLOY_ENABLED == 'true' &&
-      github.repository == 'Shakil71/Sellora-AI' &&
+      github.event.repository.fork == false &&
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy))
     runs-on: [self-hosted, sellora-vps]

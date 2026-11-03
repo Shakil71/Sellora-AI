@@ -31,12 +31,15 @@ Internet
 
 ## 1. Prepare the server (once)
 
-On a fresh Ubuntu 22.04/24.04 server (for example `192.168.197.100`):
+On a fresh Ubuntu 22.04/24.04 server, upload `sellora-ai.zip` (from your download), copy its `sellora-ai` folder into `/opt/sellora-ai/app` (so that `/opt/sellora-ai/app/package.json` exists) and run the setup script with your domain or server IP:
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/Shakil71/Sellora-AI/main/deploy/scripts/setup-server.sh
-sudo bash setup-server.sh https://github.com/Shakil71/Sellora-AI.git 192.168.197.100 sellora
+sudo apt install -y unzip && sudo mkdir -p /opt/sellora-ai/app
+unzip sellora-ai.zip -d /tmp/sellora && sudo cp -a /tmp/sellora/sellora-ai/. /opt/sellora-ai/app/
+sudo bash /opt/sellora-ai/app/deploy/scripts/setup-server.sh none app.yourshop.com sellora
 ```
+
+If you keep the code in your own Git repository instead, pass its URL in place of `none` and the script clones it.
 
 The script installs Node.js 22, PostgreSQL, Redis (bound to localhost, `noeviction`), Nginx, PM2, certbot and a firewall; creates the database with a random password; generates `/opt/sellora-ai/.env` with fresh secrets; enables the Nginx site; configures PM2 startup and log rotation; and schedules a daily database backup.
 

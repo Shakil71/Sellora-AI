@@ -7,7 +7,7 @@ import { StorageService } from '../storage/storage.service';
 import { QueueService } from '../../queue/queue.module';
 
 const startedAt = Date.now();
-const version = process.env.npm_package_version ?? '1.0.0';
+const version = process.env.npm_package_version ?? '1.2.0';
 
 async function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
   return Promise.race([p, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))]);

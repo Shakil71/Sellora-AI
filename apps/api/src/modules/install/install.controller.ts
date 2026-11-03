@@ -446,7 +446,7 @@ export class InstallService implements OnModuleInit {
         key: INSTALLED_KEY,
         value: {
           at: new Date().toISOString(),
-          version: process.env.npm_package_version ?? '1.0.0',
+          version: process.env.npm_package_version ?? '1.2.0',
         },
       },
       update: { value: { at: new Date().toISOString() } },
