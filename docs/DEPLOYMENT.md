@@ -98,6 +98,16 @@ Pushes to `main` are then deployed by the **Deploy to VPS** job, which runs `dep
 
 From then on every push to `main` that passes CI is deployed automatically. **Actions → CI/CD → Run workflow** redeploys on demand.
 
+**Oracle Linux, RHEL, Rocky, AlmaLinux (SELinux).** After `./svc.sh install`, systemd may refuse to start the runner (`status=203/EXEC`, "Permission denied" in `journalctl -u 'actions.runner.*'`). Allow its start script to run, then start it again:
+
+```bash
+sudo semanage fcontext -a -t bin_t '/home/sellora/actions-runner/runsvc\.sh'
+sudo restorecon -v /home/sellora/actions-runner/runsvc.sh
+cd /home/sellora/actions-runner && sudo ./svc.sh start
+```
+
+Nginx on these systems also needs `sudo setsebool -P httpd_can_network_connect 1` to reach the app.
+
 ### Security
 
 - The runner runs as the unprivileged `sellora` user, never root.

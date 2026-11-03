@@ -18,6 +18,9 @@ APP_DIR="${BASE_DIR}/app"
 ENV_FILE="${BASE_DIR}/.env"
 LOG_DIR="${BASE_DIR}/logs"
 BRANCH="${1:-main}"
+# Global npm tools such as pm2 live in /usr/local/bin, which service accounts and
+# sudo's secure_path (RHEL, Oracle Linux) leave out, e.g. for the GitHub runner.
+export PATH="/usr/local/bin:${PATH}"
 
 log()  { printf '\033[1;36m[deploy]\033[0m %s\n' "$*"; }
 fail() { printf '\033[1;31m[deploy] %s\033[0m\n' "$*" >&2; exit 1; }
@@ -54,6 +57,7 @@ API_PORT="$(env_get API_PORT)"; API_PORT="${API_PORT:-4000}"
 WEB_PORT="$(env_get WEB_PORT)"; WEB_PORT="${WEB_PORT:-3000}"
 HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:${API_PORT}}"
 node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 20 ? 0 : 1)' || fail "Node.js 20+ is required"
+command -v pm2 >/dev/null 2>&1 || fail "PM2 was not found on PATH (${PATH}). Install it with: sudo npm install -g pm2"
 mkdir -p "${LOG_DIR}" "${BASE_DIR}/backups" "${APP_DIR}/storage/uploads"
 
 # Fail fast with a clear message when the database login in .env is wrong,

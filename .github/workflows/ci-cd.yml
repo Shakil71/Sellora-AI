@@ -121,6 +121,10 @@ jobs:
       - name: Deploy ${{ github.sha }}
         env:
           PM2_HOME: /home/sellora/.pm2
+          # The runner kills every process a job started when the job ends. Without
+          # this, a PM2 daemon started by the deploy (e.g. after a reboot) would be
+          # killed with the whole application right after a successful deploy.
+          RUNNER_TRACKING_ID: ''
         run: |
           cd /opt/sellora-ai/app
           ./deploy.sh main
