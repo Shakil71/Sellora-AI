@@ -104,10 +104,9 @@ jobs:
     needs: ci
     # Enabled once the self-hosted runner is installed (repository variable
     # DEPLOY_ENABLED=true). See docs/DEPLOYMENT.md, "Continuous deployment".
-    # Forks never deploy, even if they copy the variable.
+    # Repository variables are not copied to forks, so forks never deploy.
     if: >-
       vars.DEPLOY_ENABLED == 'true' &&
-      github.event.repository.fork == false &&
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy))
     runs-on: [self-hosted, sellora-vps]
